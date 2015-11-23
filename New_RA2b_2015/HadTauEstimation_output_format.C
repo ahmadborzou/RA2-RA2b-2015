@@ -1,15 +1,18 @@
 /*
-
   root.exe -b -q HadTauEstimation_output_format.C 
-
- */
+*/
 
 void binMap(TH1* input, TH1* output);
+void binMap_QCD(TH1* input, TH1* output);
+void takeDiffForSys(TH1* sys, TH1* input_nominal);
+void effMapStatErrPropagation(TH1* input, TH1* output);
+void muFromTauStatErrPropagation(TH1* input, TH1* one, TH1* output);
+void isoTrkVetoErrPropagation(TH1* input, double sys, TH1* one, TH1* output_tot, TH1* output_stat, TH1* output_sys);
 
-void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
-				    string elogForMCExp="Elog381_",    // MC expectation
-				    string elogForMCPre="Elog397_",    // MC prediction
-				    string elogForSys="Elog381_",      // MC-based systematics evaluation for Btag and muon efficiencies
+void HadTauEstimation_output_format(string elogForData="Elog410_",     // Data
+				    string elogForMCExp="Elog404_",    // MC expectation
+				    string elogForMCPre="Elog408_",    // MC prediction
+				    string elogForSys="Elog408_",      // MC-based systematics evaluation for Btag and muon efficiencies
 				    string elogForMTSysUp="Elog402_",  // MT systematics
 				    string elogForMTSysDn="Elog403_",
 				    string elogForMTSysRef="Elog397_",
@@ -20,22 +23,26 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
 				    string elogForMuFromTau="Elog401_",  // Muon from tau
 				    string elogForAccStat="Elog401_",    // Acceptance 
 				    string elogForMTStat="Elog401_",     // MT cut efficiency
+				    string elogForAccPDFScale="",
 				    double trigEff=0.948,
-				    double lumiTarget=1.280231,
-				    double lumiControl=1.263886,
+				    //double lumiTarget=1.280231,
+				    //double lumiControl=1.263886,
+				    double lumiTarget=2.109271,
+				    double lumiControl=2.093663,
 				    int isys==0){
 
   char tempname[200];
 
   //
   // ----- Opening input files
-  //
+  // -------------------------------
 
   //
   // Open data files
   //
   //sprintf(tempname,"TauHad2/%sHadTauEstimation_data_SingleMuon_v15cd_.root",elogForData.c_str());
-  sprintf(tempname,"TauHad2/%sHadTauEstimation_data_SingleMuon_v15d_TriggerOn.root",elogForData.c_str());
+  //sprintf(tempname,"TauHad2/%sHadTauEstimation_data_SingleMuon_v15d_TriggerOn.root",elogForData.c_str());
+  sprintf(tempname,"TauHad2/%sHadTauEstimation_data_SingleMuon_v15d_.root",elogForData.c_str());
   TFile *DataEstFile = TFile::Open(tempname,"R");
   printf("Opened %s\n",tempname);
 
@@ -44,6 +51,7 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   //
   TH1D* searchBin_one = (TH1D*)DataEstFile->Get("searchH_b")->Clone("seaerchBin_one");
   searchBin_one->Reset();
+  searchBin_one->SetLineColor(1);
   for (int ibin=0; ibin<searchBin_one->GetNbinsX(); ibin++){
     searchBin_one->SetBinContent(ibin+1,1.);
     searchBin_one->SetBinError(ibin+1,0.);
@@ -52,6 +60,18 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   TH1D* searchBin_box = (TH1D*)DataEstFile->Get("searchH_b")->Clone("seaerchBin_box");
   searchBin_box->Reset();
   searchBin_box->SetLineColor(0);
+
+  TH1D* QCDBin_one = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_one");
+  QCDBin_one->Reset();
+  QCDBin_one->SetLineColor(1);
+  for (int ibin=0; ibin<QCDBin_one->GetNbinsX(); ibin++){
+    QCDBin_one->SetBinContent(ibin+1,1.);
+    //QCDBin_one->SetBinError(ibin+1,0.);
+  }
+
+  TH1D* QCDBin_box = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_box");
+  QCDBin_box->Reset();
+  QCDBin_box->SetLineColor(0);
 
   //
   // Open MC expectation and prediction code for closure systematics
@@ -71,7 +91,9 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   //
   // Open MC file including systematics.
   //
-  sprintf(tempname,"TauHad2/%sHadTauEstimation_haddedToContainSysErrorFolders_.root",elogForSys.c_str());
+  ///home/borzou/CMSSW_7_4_0_pre1/src/RA2-RA2b-2015/New_RA2b_2015/TauHad2/HadTauEstimation_Elog408_ContainigStatandSysErrors.root
+  sprintf(tempname,"TauHad2/HadTauEstimation_%sContainigStatandSysErrors.root",elogForSys.c_str());
+  //sprintf(tempname,"TauHad2/%sHadTauEstimation_haddedToContainSysErrorFolders_.root",elogForSys.c_str());
   TFile * MCSysFile = new TFile(tempname,"R");
   printf("Opened %s\n",tempname);
 
@@ -118,83 +140,130 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   TFile * IsoTrkVetoFile = new TFile(tempname,"R");
   printf("Opened %s\n",tempname);
   
-  TH1D* IsoTrkVetoEff = (TH1D*)IsoTrkVetoFile->Get("IsoEff")->Clone("IsoEff");
+  TH1D* IsoTrkVetoEff = (TH1D*)IsoTrkVetoFile->Get("IsoEff")->Clone("IsoTrkVetoEff");
+  TH1D* IsoTrkVetoEff_LowDphi = (TH1D*)IsoTrkVetoFile->Get("IsoEff_lowDphi")->Clone("IsoTrkVetoEff_LowDphi");
+
   TH1D* searchBin_IsoTrkVetoEff = (TH1D*)DataEstFile->Get("searchH_b")->Clone("seaerchBin_IsoTrkVetoEff");
   searchBin_IsoTrkVetoEff->Reset();
-
   binMap(IsoTrkVetoEff,searchBin_IsoTrkVetoEff);
+
+  TH1D* QCDBin_HiDphi_IsoTrkVetoEff = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_HiDphi_IsoTrkVetoEff");
+  QCDBin_HiDphi_IsoTrkVetoEff->Reset();
+  binMap_QCD(IsoTrkVetoEff,QCDBin_HiDphi_IsoTrkVetoEff);
+
+  TH1D* QCDBin_LowDphi_IsoTrkVetoEff = (TH1D*)DataEstFile->Get("QCD_Low")->Clone("QCDBin_LowDphi_IsoTrkVetoEff");
+  QCDBin_LowDphi_IsoTrkVetoEff->Reset();
+  binMap_QCD(IsoTrkVetoEff_LowDphi,QCDBin_LowDphi_IsoTrkVetoEff);
 
   TH1D* searchBin_IsoTrkVetoEffUncertaintyTot  = (TH1D*)searchBin_IsoTrkVetoEff->Clone("seaerchBin_IsoTrkVetoEffUncertaintyTot");
   TH1D* searchBin_IsoTrkVetoEffUncertaintyStat = (TH1D*)searchBin_IsoTrkVetoEff->Clone("seaerchBin_IsoTrkVetoEffUncertaintyStat");
   TH1D* searchBin_IsoTrkVetoEffUncertaintySys  = (TH1D*)searchBin_IsoTrkVetoEff->Clone("seaerchBin_IsoTrkVetoEffUncertaintySys");
-  searchBin_IsoTrkVetoEffUncertaintySys->Add(searchBin_one,-1.);  // (eff-1.) ~ -0.4
-  searchBin_IsoTrkVetoEffUncertaintySys->Scale(-1.); // (1-eff) ~ 0.4
-  searchBin_IsoTrkVetoEffUncertaintySys->Scale(0.1); // (1-eff)*0.1 ~ 0.04, i.e. 10% of the (1-eff)
-  for (int ibin=0;ibin<searchBin_IsoTrkVetoEffUncertaintyTot->GetNbinsX();ibin++){
-    double unc = pow(pow(searchBin_IsoTrkVetoEffUncertaintySys->GetBinContent(ibin+1),2)
-		     + pow(searchBin_IsoTrkVetoEff->GetBinError(ibin+1),2),0.5);
-    searchBin_IsoTrkVetoEffUncertaintyTot->SetBinContent(ibin+1,unc);
-    searchBin_IsoTrkVetoEffUncertaintyStat->SetBinContent(ibin+1,searchBin_IsoTrkVetoEff->GetBinError(ibin+1));
-  }
-  searchBin_IsoTrkVetoEffUncertaintySys->Divide(searchBin_IsoTrkVetoEff);   // (1-eff)*0.1/eff
-  searchBin_IsoTrkVetoEffUncertaintyStat->Divide(searchBin_IsoTrkVetoEff);  // sigma(eff)/eff
-  searchBin_IsoTrkVetoEffUncertaintyTot->Divide(searchBin_IsoTrkVetoEff);   // 
+
+  TH1D* QCDBin_HiDphi_IsoTrkVetoEffUncertaintyTot  = (TH1D*)QCDBin_HiDphi_IsoTrkVetoEff->Clone("QCDBin_HiDphi_IsoTrkVetoEffUncertaintyTot");
+  TH1D* QCDBin_HiDphi_IsoTrkVetoEffUncertaintyStat = (TH1D*)QCDBin_HiDphi_IsoTrkVetoEff->Clone("QCDBin_HiDphi_IsoTrkVetoEffUncertaintyStat");
+  TH1D* QCDBin_HiDphi_IsoTrkVetoEffUncertaintySys  = (TH1D*)QCDBin_HiDphi_IsoTrkVetoEff->Clone("QCDBin_HiDphi_IsoTrkVetoEffUncertaintySys");
+
+  TH1D* QCDBin_LowDphi_IsoTrkVetoEffUncertaintyTot  = (TH1D*)QCDBin_LowDphi_IsoTrkVetoEff->Clone("QCDBin_LowDphi_IsoTrkVetoEffUncertaintyTot");
+  TH1D* QCDBin_LowDphi_IsoTrkVetoEffUncertaintyStat = (TH1D*)QCDBin_LowDphi_IsoTrkVetoEff->Clone("QCDBin_LowDphi_IsoTrkVetoEffUncertaintyStat");
+  TH1D* QCDBin_LowDphi_IsoTrkVetoEffUncertaintySys  = (TH1D*)QCDBin_LowDphi_IsoTrkVetoEff->Clone("QCDBin_LowDphi_IsoTrkVetoEffUncertaintySys");
+
+  isoTrkVetoErrPropagation(searchBin_IsoTrkVetoEff, 0.1, searchBin_one,
+			   searchBin_IsoTrkVetoEffUncertaintyTot, searchBin_IsoTrkVetoEffUncertaintyStat, searchBin_IsoTrkVetoEffUncertaintySys);
+  isoTrkVetoErrPropagation(QCDBin_HiDphi_IsoTrkVetoEff, 0.1, QCDBin_one,
+			   QCDBin_HiDphi_IsoTrkVetoEffUncertaintyTot, QCDBin_HiDphi_IsoTrkVetoEffUncertaintyStat, QCDBin_HiDphi_IsoTrkVetoEffUncertaintySys);
+  isoTrkVetoErrPropagation(QCDBin_LowDphi_IsoTrkVetoEff, 0.1, QCDBin_one,
+			   QCDBin_LowDphi_IsoTrkVetoEffUncertaintyTot, QCDBin_LowDphi_IsoTrkVetoEffUncertaintyStat, QCDBin_LowDphi_IsoTrkVetoEffUncertaintySys);
 
   //
   // Mu from tau
-  // 
+  // -----------
   sprintf(tempname,"TauHad2/Stack/%sProbability_Tau_mu_stacked.root",elogForMuFromTau.c_str());
   TFile * Prob_Tau_mu_file = new TFile(tempname,"R");
   sprintf(tempname,"hProb_Tau_mu");
   TH1D * hProb_Tau_mu =(TH1D *) Prob_Tau_mu_file->Get(tempname)->Clone();
+  sprintf(tempname,"hProb_Tau_mu_lowDelphi");
+  TH1D * hProb_Tau_mu_LowDphi =(TH1D *) Prob_Tau_mu_file->Get(tempname)->Clone();
   
-
   TH1D* searchBin_MuFromTau = (TH1D*)DataEstFile->Get("searchH_b")->Clone("seaerchBin_MuFromTau");
   searchBin_MuFromTau->Reset();
   binMap(hProb_Tau_mu,searchBin_MuFromTau);
 
+  TH1D* QCDBin_HiDphi_MuFromTau = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_HiDphi_MuFromTau");
+  QCDBin_HiDphi_MuFromTau->Reset();
+  binMap_QCD(hProb_Tau_mu,QCDBin_HiDphi_MuFromTau);
+
+  TH1D* QCDBin_LowDphi_MuFromTau = (TH1D*)DataEstFile->Get("QCD_Low")->Clone("QCDBin_LowDphi_MuFromTau");
+  QCDBin_LowDphi_MuFromTau->Reset();
+  binMap_QCD(hProb_Tau_mu_LowDphi,QCDBin_LowDphi_MuFromTau);
+
   TH1D* searchBin_MuFromTauStat  = (TH1D*)searchBin_MuFromTau->Clone("seaerchBin_MuFromTauStat");
-  for (int ibin=0;ibin<searchBin_MuFromTauStat->GetNbinsX();ibin++){
-    searchBin_MuFromTauStat->SetBinContent(ibin+1,searchBin_MuFromTau->GetBinError(ibin+1));
-  }
-  searchBin_MuFromTau->Add(searchBin_one,-1.);           // (f-1.) ~ -0.7
-  searchBin_MuFromTau->Scale(-1.);                       // (1-f) ~ 0.7
-  searchBin_MuFromTauStat->Divide(searchBin_MuFromTau);  // sigma(f)/(1-f)
-  
+  TH1D* QCDBin_HiDphi_MuFromTauStat  = (TH1D*)QCDBin_HiDphi_MuFromTau->Clone("QCDBin_HiDphi_MuFromTauStat");
+  TH1D* QCDBin_LowDphi_MuFromTauStat = (TH1D*)QCDBin_LowDphi_MuFromTau->Clone("QCDBin_LowDphi_MuFromTauStat");
+
+  muFromTauStatErrPropagation(searchBin_MuFromTau,searchBin_one,searchBin_MuFromTauStat);
+  muFromTauStatErrPropagation(QCDBin_HiDphi_MuFromTau, QCDBin_one,QCDBin_HiDphi_MuFromTauStat);
+  muFromTauStatErrPropagation(QCDBin_LowDphi_MuFromTau,QCDBin_one,QCDBin_LowDphi_MuFromTauStat);
+
   //
   // Acceptance
-  //
+  // ----------
   sprintf(tempname,"TauHad/Stack/%sLostLepton2_MuonEfficienciesFromstacked.root",elogForAccStat.c_str());
   TFile * MuAcc_file = new TFile(tempname,"R");  
   sprintf(tempname,"hAcc");
   TH1D * hAcc =(TH1D *) MuAcc_file->Get(tempname)->Clone();
+  sprintf(tempname,"hAcc_lowDphi");
+  TH1D * hAcc_LowDphi =(TH1D *) MuAcc_file->Get(tempname)->Clone();
 
   TH1D* searchBin_Acc = (TH1D*)DataEstFile->Get("searchH_b")->Clone("seaerchBin_Acc");
   searchBin_Acc->Reset();
   binMap(hAcc,searchBin_Acc);
 
-  TH1D* searchBin_AccStat  = (TH1D*)searchBin_Acc->Clone("seaerchBin_AccStat");
-  for (int ibin=0;ibin<searchBin_AccStat->GetNbinsX();ibin++){
-    searchBin_AccStat->SetBinContent(ibin+1,searchBin_Acc->GetBinError(ibin+1));
-  }
-  searchBin_AccStat->Divide(searchBin_Acc);  // sigma(Acc)/Acc
+  TH1D* QCDBin_HiDphi_Acc = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_HiDphi_Acc");
+  QCDBin_HiDphi_Acc->Reset();
+  binMap_QCD(hAcc,QCDBin_HiDphi_Acc);
+
+  TH1D* QCDBin_LowDphi_Acc = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_LowDphi_Acc");
+  QCDBin_LowDphi_Acc->Reset();
+  binMap_QCD(hAcc_LowDphi,QCDBin_LowDphi_Acc);
 
   //
-  // MT cut 
+  TH1D* searchBin_AccStat  = (TH1D*)searchBin_Acc->Clone("seaerchBin_AccStat");
+  TH1D* QCDBin_HiDphi_AccStat  = (TH1D*)QCDBin_HiDphi_Acc->Clone("QCDBin_HiDphi_AccStat");
+  TH1D* QCDBin_LowDphi_AccStat = (TH1D*)QCDBin_LowDphi_Acc->Clone("QCDBin_LowDphi_AccStat");
+
+  effMapStatErrPropagation(searchBin_Acc,searchBin_AccStat);
+  effMapStatErrPropagation(QCDBin_HiDphi_Acc, QCDBin_HiDphi_AccStat);
+  effMapStatErrPropagation(QCDBin_LowDphi_Acc,QCDBin_LowDphi_AccStat);
+
   //
+  // MT cut efficiency
+  // -----------------
   sprintf(tempname,"TauHad2/%sMtEff.root",elogForMTStat.c_str());
   TFile * MtFile = new TFile(tempname,"R");
   TH1D * hMT = (TH1D *) MtFile->Get("MtCutEff")->Clone();
+  TH1D * hMT_LowDphi = (TH1D *) MtFile->Get("MtCutEff_lowDphi")->Clone();
 
   TH1D* searchBin_MtEff = (TH1D*)DataEstFile->Get("searchH_b")->Clone("seaerchBin_MtEff");
   searchBin_MtEff->Reset();
   binMap(hMT,searchBin_MtEff);
 
+  TH1D* QCDBin_HiDphi_MtEff = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_HiDphi_MtEff");
+  QCDBin_HiDphi_MtEff->Reset();
+  binMap_QCD(hMT,QCDBin_HiDphi_MtEff);
+
+  TH1D* QCDBin_LowDphi_MtEff = (TH1D*)DataEstFile->Get("QCD_Low")->Clone("QCDBin_LowDphi_MtEff");
+  QCDBin_LowDphi_MtEff->Reset();
+  binMap_QCD(hMT_LowDphi,QCDBin_LowDphi_MtEff);
+
+  //
   TH1D* searchBin_MtEffStat  = (TH1D*)searchBin_MtEff->Clone("seaerchBin_MtEffStat");
-  for (int ibin=0;ibin<searchBin_MtEffStat->GetNbinsX();ibin++){
-    searchBin_MtEffStat->SetBinContent(ibin+1,searchBin_MtEff->GetBinError(ibin+1));
-  }
-  searchBin_MtEffStat->Divide(searchBin_MtEff);  // sigma(MtEff)/MtEff
+  TH1D* QCDBin_HiDphi_MtEffStat  = (TH1D*)QCDBin_HiDphi_MtEff->Clone("QCDBin_HiDphi_MtEffStat");
+  TH1D* QCDBin_LowDphi_MtEffStat = (TH1D*)QCDBin_LowDphi_MtEff->Clone("QCDBin_LowDphi_MtEffStat");
+
+  effMapStatErrPropagation(searchBin_MtEff,searchBin_MtEffStat);
+  searchBin_MtEffStat->Print("all");
+  effMapStatErrPropagation(QCDBin_HiDphi_MtEff, QCDBin_HiDphi_MtEffStat);
+  effMapStatErrPropagation(QCDBin_LowDphi_MtEff,QCDBin_LowDphi_MtEffStat);
 
   //
   // Const uncertainty
@@ -203,21 +272,45 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   TH1D *searchBin_DileptonUncertainty = (TH1D*) searchBin_one->Clone("searchBin_DileptonUncertainty");
   searchBin_DileptonUncertainty->Scale(dilep);
 
+  TH1D *QCDBin_HiDphi_DileptonUncertainty = (TH1D*) QCDBin_one->Clone("QCDBin_HiDphi_DileptonUncertainty");
+  QCDBin_HiDphi_DileptonUncertainty->Scale(dilep);
+
+  TH1D *QCDBin_LowDphi_DileptonUncertainty = (TH1D*) QCDBin_one->Clone("QCDBin_LowDphi_DileptonUncertainty");
+  QCDBin_LowDphi_DileptonUncertainty->Scale(dilep);
+
+  //
+  // ---- Nominal predictions and stat uncertainties -----
+  // -----------------------------------------------------
+
   //
   // ----- Normal 72 bin predicitons -----
   //
 
-  //
-  // Nominal
-  //
   TH1D* searchBin_nominal = (TH1D*)DataEstFile->Get("searchH_b")->Clone("searchBin_nominal");
   TH2D* hWeightForSearchBin = (TH2D*)DataEstFile->Get("hWeight4ForSearchBin")->Clone("hWeightForSearchBin");
-  searchBin_nominal->Print();
+  //searchBin_nominal->Print();
   searchBin_nominal->Scale(1/trigEff*lumiTarget/lumiControl); 
-  searchBin_nominal->Print();
+  //searchBin_nominal->Print();
   TH1D* searchBin_nominal_fullstatuncertainty = (TH1D*)searchBin_nominal->Clone("searchBin_nominal_fullstatuncertainty");
   for (int ibin=0; ibin<searchBin_nominal->GetNbinsX(); ibin++){
     searchBin_nominal_fullstatuncertainty->SetBinError(ibin+1,pow(pow(searchBin_nominal->GetBinError(ibin+1),2)+pow(0.275,2),0.5));
+  }
+
+  //
+  // ----- QCD bin predicitons -----
+  //
+  TH1D* QCDBin_HiDphi_nominal  = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_HiDphi_nominal");
+  QCDBin_HiDphi_nominal->Scale(1/trigEff*lumiTarget/lumiControl);
+  TH1D* QCDBin_HiDphi_nominal_fullstatuncertainty = (TH1D*)QCDBin_HiDphi_nominal->Clone("QCDBin_HiDphi_nominal_fullstatuncertainty");
+  for (int ibin=0; ibin<QCDBin_HiDphi_nominal->GetNbinsX(); ibin++){
+    QCDBin_HiDphi_nominal_fullstatuncertainty->SetBinError(ibin+1,pow(pow(QCDBin_HiDphi_nominal->GetBinError(ibin+1),2)+pow(0.275,2),0.5));
+  }
+
+  TH1D* QCDBin_LowDphi_nominal = (TH1D*)DataEstFile->Get("QCD_Low")->Clone("QCDBin_LowDphi_nominal");
+  QCDBin_LowDphi_nominal->Scale(1/trigEff*lumiTarget/lumiControl);
+  TH1D* QCDBin_LowDphi_nominal_fullstatuncertainty = (TH1D*)QCDBin_LowDphi_nominal->Clone("QCDBin_LowDphi_nominal_fullstatuncertainty");
+  for (int ibin=0; ibin<QCDBin_LowDphi_nominal->GetNbinsX(); ibin++){
+    QCDBin_LowDphi_nominal_fullstatuncertainty->SetBinError(ibin+1,pow(pow(QCDBin_LowDphi_nominal->GetBinError(ibin+1),2)+pow(0.275,2),0.5));
   }
 
   // Some additional variables
@@ -226,14 +319,73 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   double searchBin_uncertainty_correction_stats_dn[73];
   double searchBin_uncertainty_correction_stats[73];
 
+  double QCDBin_HiDphi_stat_uncertainty_fractional[221];
+  double QCDBin_HiDphi_uncertainty_correction_stats_up[221];
+  double QCDBin_HiDphi_uncertainty_correction_stats_dn[221];
+  double QCDBin_HiDphi_uncertainty_correction_stats[221];
+
+  double QCDBin_LowDphi_stat_uncertainty_fractional[221];
+  double QCDBin_LowDphi_uncertainty_correction_stats_up[221];
+  double QCDBin_LowDphi_uncertainty_correction_stats_dn[221];
+  double QCDBin_LowDphi_uncertainty_correction_stats[221];
+
   TH1D* searchBin_StatUncertainties = (TH1D*)DataEstFile->Get("searchH_b")->Clone("searchBin_StatUncertainties");
   searchBin_StatUncertainties->Reset();
   TH1D* searchBin_StatUncertaintiesFractional = (TH1D*)DataEstFile->Get("searchH_b")->Clone("searchBin_StatUncertaintiesFractional");
   searchBin_StatUncertaintiesFractional->Reset();
 
+  TH1D* QCDBin_HiDphi_StatUncertainties = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_HiDphi_StatUncertainties");
+  QCDBin_HiDphi_StatUncertainties->Reset();
+  TH1D* QCDBin_HiDphi_StatUncertaintiesFractional = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_HiDphi_StatUncertaintiesFractional");
+  QCDBin_HiDphi_StatUncertaintiesFractional->Reset();
+
+  TH1D* QCDBin_LowDphi_StatUncertainties = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_LowDphi_StatUncertainties");
+  QCDBin_LowDphi_StatUncertainties->Reset();
+  TH1D* QCDBin_LowDphi_StatUncertaintiesFractional = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_LowDphi_StatUncertaintiesFractional");
+  QCDBin_LowDphi_StatUncertaintiesFractional->Reset();
+
+  //
+  // ----- Stat uncertainties
+  //
+
+  for (int ibin=1;ibin<=72;ibin++){
+    // Stat uncertainty
+    searchBin_stat_uncertainty_fractional[ibin]=0.;
+    if (searchBin_nominal->GetBinContent(ibin)!=0.){
+      searchBin_StatUncertainties->SetBinContent(ibin,searchBin_nominal->GetBinError(ibin));
+      searchBin_stat_uncertainty_fractional[ibin] = searchBin_nominal_fullstatuncertainty->GetBinError(ibin)/searchBin_nominal->GetBinContent(ibin);
+      searchBin_StatUncertaintiesFractional->SetBinContent(ibin,searchBin_stat_uncertainty_fractional[ibin]);
+    } else {
+      searchBin_StatUncertaintiesFractional->SetBinContent(ibin,2.);
+    }
+  }
+
+  for (int ibin=1;ibin<=220;ibin++){
+    //
+    // Stat uncertainty
+    QCDBin_HiDphi_stat_uncertainty_fractional[ibin]=0.;
+    if (QCDBin_HiDphi_nominal->GetBinContent(ibin)!=0.){
+      QCDBin_HiDphi_StatUncertainties->SetBinContent(ibin,QCDBin_HiDphi_nominal->GetBinError(ibin));
+      QCDBin_HiDphi_stat_uncertainty_fractional[ibin] = QCDBin_HiDphi_nominal->GetBinError(ibin)/QCDBin_HiDphi_nominal->GetBinContent(ibin);    
+      QCDBin_HiDphi_StatUncertaintiesFractional->SetBinContent(ibin,QCDBin_HiDphi_stat_uncertainty_fractional[ibin]);
+    } else {
+      QCDBin_HiDphi_StatUncertaintiesFractional->SetBinContent(ibin,2.);
+    }
+    //
+    // Stat uncertainty
+    QCDBin_LowDphi_stat_uncertainty_fractional[ibin]=0.;
+    if (QCDBin_LowDphi_nominal->GetBinContent(ibin)!=0.){
+      QCDBin_LowDphi_StatUncertainties->SetBinContent(ibin,QCDBin_LowDphi_nominal->GetBinError(ibin));
+      QCDBin_LowDphi_stat_uncertainty_fractional[ibin] = QCDBin_LowDphi_nominal->GetBinError(ibin)/QCDBin_LowDphi_nominal->GetBinContent(ibin);
+      QCDBin_LowDphi_StatUncertaintiesFractional->SetBinContent(ibin,QCDBin_LowDphi_stat_uncertainty_fractional[ibin]);
+    } else {
+      QCDBin_LowDphi_StatUncertaintiesFractional->SetBinContent(ibin,2.);
+    }
+  }
+  
   //
   // Jack's inclusive binning
-  // 
+  // ------------------------
   TH1D* hPredHTMHT0b_nominal_ABbins = (TH1D*)DataEstFile->Get("hPredHTMHT0b")->Clone("hPredHTMHT0b_nominal_ABbins");
   TH1D* hPredHTMHTwb_nominal_ABbins = (TH1D*)DataEstFile->Get("hPredHTMHTwb")->Clone("hPredHTMHTwb_nominal_ABbins");
   TH1D* hPredNJetBins_nominal = (TH1D*)DataEstFile->Get("hPredNJetBins")->Clone("hPredNJetBins_nominal");
@@ -254,33 +406,9 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
     hPredNbBins_nominal->SetBinError(ibin+1,pow(pow(hPredNbBins_nominal->GetBinError(ibin+1),2)+pow(0.275,2),0.5));
   }
 
-  // 
-  // From MC sys file
   //
-  string histname="searchH_b_";
-  string cutname="delphi";
-  sprintf(tempname,"allEvents/%s/%s",cutname.c_str(),histname.c_str());
-  TH1D * searchBin_default = (TH1D*)MCSysFile->Get(tempname)->Clone();
-
-  sprintf(tempname,"BMistagPlus/%s/%s",cutname.c_str(),histname.c_str());  
-  TH1D* searchBin_BMistagUp = (TH1D*)MCSysFile->Get(tempname)->Clone("searchBin_BMistagUp");
-  sprintf(tempname,"BMistagMinus/%s/%s",cutname.c_str(),histname.c_str());
-  TH1D* searchBin_BMistagDn = (TH1D*)MCSysFile->Get(tempname)->Clone("searchBin_BMistagDn");
-  searchBin_BMistagUp->Add(searchBin_default,-1.); searchBin_BMistagUp->Divide(searchBin_default);
-  searchBin_BMistagDn->Add(searchBin_default,-1.); searchBin_BMistagDn->Divide(searchBin_default);
-  
-  //searchBin_BMistagUp->Print("all");
-  //searchBin_BMistagDn->Print("all");
-
-  sprintf(tempname,"RecoIsoSysPlus/%s/%s",cutname.c_str(),histname.c_str());  
-  TH1D* searchBin_MuRecoIsoSysUp = (TH1D*)MCSysFile->Get(tempname)->Clone("searchBin_MuRecoIsoSysUp");
-  sprintf(tempname,"RecoIsoSysMinus/%s/%s",cutname.c_str(),histname.c_str());
-  TH1D* searchBin_MuRecoIsoSysDn = (TH1D*)MCSysFile->Get(tempname)->Clone("searchBin_MuRecoIsoSysDn");
-  searchBin_MuRecoIsoSysUp->Add(searchBin_default,-1.); searchBin_MuRecoIsoSysUp->Divide(searchBin_default);
-  searchBin_MuRecoIsoSysDn->Add(searchBin_default,-1.); searchBin_MuRecoIsoSysDn->Divide(searchBin_default);
-
-  //searchBin_MuRecoIsoSysUp->Print("all");
-  //searchBin_MuRecoIsoSysDn->Print("all");
+  // ---- Closure systematics -----
+  // -----------------------------------------------------
 
   //
   // From MC file
@@ -298,38 +426,11 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   GenHist=(TH1D*) tempstack->GetStack()->Last();
 
   //
-  // JEC & MT cut efficiency
-  //
-  std::cout << "test1" << std::endl;
-  string histname="searchH_b";
-  sprintf(tempname,"%s",histname.c_str());
-  tempstack=(THStack*)JECSysUpFile->Get(tempname)->Clone("searchBin_JECSysUp");  
-  TH1D * searchBin_JECSysUp  = (TH1D*) tempstack->GetStack()->Last();
-  tempstack=(THStack*)JECSysDnFile->Get(tempname)->Clone("searchBin_JECSysDn");  
-  TH1D * searchBin_JECSysDn  = (TH1D*) tempstack->GetStack()->Last();
-  tempstack=(THStack*)JECSysRefFile->Get(tempname)->Clone("searchBin_JECSysRef");  
-  TH1D * searchBin_JECSysRef = (TH1D*) tempstack->GetStack()->Last();
-
-  std::cout << "test1b" << std::endl;
-  tempstack=(THStack*)MTSysUpFile->Get(tempname)->Clone("searchBin_MTSysUp");  
-  TH1D * searchBin_MTSysUp  = (TH1D*) tempstack->GetStack()->Last();
-  std::cout << "test1b" << std::endl;
-  tempstack=(THStack*)MTSysDnFile->Get(tempname)->Clone("searchBin_MTSysDn");  
-  TH1D * searchBin_MTSysDn  = (TH1D*) tempstack->GetStack()->Last();
-  std::cout << "test1b" << std::endl;
-  tempstack=(THStack*)MTSysRefFile->Get(tempname)->Clone("searchBin_MTSysRef");  
-  TH1D * searchBin_MTSysRef = (TH1D*) tempstack->GetStack()->Last();
-  
-  searchBin_JECSysUp->Add(searchBin_JECSysRef,-1.); searchBin_JECSysUp->Divide(searchBin_JECSysRef);
-  searchBin_JECSysDn->Add(searchBin_JECSysRef,-1.); searchBin_JECSysDn->Divide(searchBin_JECSysRef);
-  searchBin_MTSysUp->Add(searchBin_MTSysRef,-1.); searchBin_MTSysUp->Divide(searchBin_MTSysRef);
-  searchBin_MTSysDn->Add(searchBin_MTSysRef,-1.); searchBin_MTSysDn->Divide(searchBin_MTSysRef);
-  std::cout << "test2" << std::endl;
-
-  //
   // Preparing ratio histograms: Expectation/Prediction for closure uncertainty
   //
   TH1D * searchBin_closureUncertainty = static_cast<TH1D*>(GenHist->Clone("searchBin_closureUncertainty"));
+  searchBin_closureUncertainty->SetFillColor(0);
+  searchBin_closureUncertainty->SetLineColor(1);
   searchBin_closureUncertainty->Reset();
 
   TH1D * closureRatio= static_cast<TH1D*>(GenHist->Clone("closureRatio"));
@@ -379,193 +480,6 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   printf("nj3 average=%8.2f\n",avenj3);
   searchBin_closureUncertainty->Print("all");
 
-  /*
-  if (isys==1){
-  // Stat uncertainty of search-bin-based correction factors
-  TH1D* searchBin_AccUp = (TH1D*)DataEstFile->Get("AccMinus/delphi/searchH_b_")->Clone("searchBin_AccUp");
-  TH1D* searchBin_AccDn = (TH1D*)DataEstFile->Get("AccPlus/delphi/searchH_b_")->Clone("searchBin_AccDn");
-  TH1D* searchBin_IsoUp = (TH1D*)DataEstFile->Get("IsoPlus/delphi/searchH_b_")->Clone("searchBin_IsoUp");
-  TH1D* searchBin_IsoDn = (TH1D*)DataEstFile->Get("IsoMinus/delphi/searchH_b_")->Clone("searchBin_IsoDn");
-  TH1D* searchBin_MTUp = (TH1D*)DataEstFile->Get("MTMinus/delphi/searchH_b_")->Clone("searchBin_MTUp");
-  TH1D* searchBin_MTDn = (TH1D*)DataEstFile->Get("MTPlus/delphi/searchH_b_")->Clone("searchBin_MTDn");
-  TH1D* searchBin_MuFromTauUp = (TH1D*)DataEstFile->Get("MuFromTauMinus/delphi/searchH_b_")->Clone("searchBin_MuFromTauUp");
-  TH1D* searchBin_MuFromTauDn = (TH1D*)DataEstFile->Get("MuFromTauPlus/delphi/searchH_b_")->Clone("searchBin_MuFromTauDn");
-  
-  searchBin_AccUp->Add(searchBin_nominal,-1.); searchBin_AccUp->Divide(searchBin_nominal);
-  searchBin_AccDn->Add(searchBin_nominal,-1.); searchBin_AccDn->Divide(searchBin_nominal);
-  searchBin_IsoUp->Add(searchBin_nominal,-1.); searchBin_IsoUp->Divide(searchBin_nominal);
-  searchBin_IsoDn->Add(searchBin_nominal,-1.); searchBin_IsoDn->Divide(searchBin_nominal);
-  searchBin_MTUp->Add(searchBin_nominal,-1.); searchBin_MTUp->Divide(searchBin_nominal);
-  searchBin_MTDn->Add(searchBin_nominal,-1.); searchBin_MTDn->Divide(searchBin_nominal);
-  searchBin_MuFromTauUp->Add(searchBin_nominal,-1.); searchBin_MuFromTauUp->Divide(searchBin_nominal);
-  searchBin_MuFromTauDn->Add(searchBin_nominal,-1.); searchBin_MuFromTauDn->Divide(searchBin_nominal);
-
-  // BMistag
-  TH1D* searchBin_BMistagUp = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/searchH_b_")->Clone("searchBin_BMistagUp");
-  TH1D* searchBin_BMistagDn = (TH1D*)DataEstFile->Get("BMistagMinus/delphi/searchH_b_")->Clone("searchBin_BMistagDn");
-  searchBin_BMistagUp->Add(searchBin_nominal,-1.); searchBin_BMistagUp->Divide(searchBin_nominal);
-  searchBin_BMistagDn->Add(searchBin_nominal,-1.); searchBin_BMistagDn->Divide(searchBin_nominal);
-
-  //
-  // Closure: 
-  // Njets=4-6: 20%
-  // Njets=7-8: 40%
-  // Njets=9- : 60%
-  // MHT2 for Wjets-dominated region: 20%
-  // MHT3 for Wjets-dominated region: 40%
-  // MHT2 for ttbar-dominated region: 20%
-  // MHT3 for ttbar-dominated region: 40%
-  double SearchBin_ClosureMHT2Wjets[72]    = {
-    -999.,-999.,-999.,  0.2,  0.2,-999., // Njets=4-6
-    -999.,-999.,-999.,  0.2,  0.2,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,-999., // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999., // Njets=9-
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.
-  };
-  double SearchBin_ClosureMHT3Wjets[72]    = {
-    -999.,-999.,-999.,-999.,-999.,  0.4, // Njets=4-6
-    -999.,-999.,-999.,-999.,-999.,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,  0.4, // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999., // Njets=9-
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.
-  };
-  double SearchBin_ClosureMHT2TTbar[72]    = {
-    -999.,-999.,-999.,-999.,-999.,-999., // Njets=4-6
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999., // Njets=7-8
-    -999.,-999.,-999.,  0.2,  0.2,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,-999., // Njets=9-
-    -999.,-999.,-999.,  0.2,  0.2,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,-999.
-  };
-  double SearchBin_ClosureMHT3TTbar[72]    = {
-    -999.,-999.,-999.,-999.,-999.,-999., // Njets=4-6
-    -999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,  0.4,
-    -999.,-999.,-999.,-999.,-999.,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999., // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,  0.4,
-    -999.,-999.,-999.,-999.,-999.,  0.4,
-    -999.,-999.,-999.,-999.,-999.,  0.4,
-    -999.,-999.,-999.,-999.,-999.,  0.4, // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,  0.4,
-    -999.,-999.,-999.,-999.,-999.,  0.4,
-    -999.,-999.,-999.,-999.,-999.,  0.4
-  };
-
-  //
-  TH1D* searchBin_ClosureNj46 = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/searchH_b_")->Clone("searchBin_ClosureNj46");
-  TH1D* searchBin_ClosureNj78 = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/searchH_b_")->Clone("searchBin_ClosureNj78");
-  TH1D* searchBin_ClosureNj9  = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/searchH_b_")->Clone("searchBin_ClosureNj9");
-  TH1D* searchBin_ClosureMHT2Wjets = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/searchH_b_")->Clone("searchBin_ClosureMHT2Wjets");
-  TH1D* searchBin_ClosureMHT3Wjets = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/searchH_b_")->Clone("searchBin_ClosureMHT3Wjets");
-  TH1D* searchBin_ClosureMHT2TTbar = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/searchH_b_")->Clone("searchBin_ClosureMHT2TTbar");
-  TH1D* searchBin_ClosureMHT3TTbar = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/searchH_b_")->Clone("searchBin_ClosureMHT3TTbar");
-  TH1D* searchBin_ClosureTotal = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/searchH_b_")->Clone("searchBin_ClosureTotal");
-  searchBin_ClosureNj46->Reset();
-  for (int ibin=1;  ibin<=72; ibin++) searchBin_ClosureNj46->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=1;  ibin<=24; ibin++) searchBin_ClosureNj46->SetBinContent(ibin,0.20);
-  searchBin_ClosureNj78->Reset();
-  for (int ibin=1;  ibin<=72; ibin++) searchBin_ClosureNj78->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=25; ibin<=48; ibin++) searchBin_ClosureNj78->SetBinContent(ibin,0.40);
-  searchBin_ClosureNj9->Reset();
-  for (int ibin=1;  ibin<=72; ibin++) searchBin_ClosureNj9->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=49; ibin<=72; ibin++) searchBin_ClosureNj9->SetBinContent(ibin,0.60);
-  searchBin_ClosureMHT2Wjets->Reset();
-  for (int ibin=1;  ibin<=72; ibin++) searchBin_ClosureMHT2Wjets->SetBinContent(ibin,SearchBin_ClosureMHT2Wjets[ibin-1]); // -999. for non-applicable bins
-  searchBin_ClosureMHT3Wjets->Reset();
-  for (int ibin=1;  ibin<=72; ibin++) searchBin_ClosureMHT3Wjets->SetBinContent(ibin,SearchBin_ClosureMHT3Wjets[ibin-1]); // -999. for non-applicable bins
-  searchBin_ClosureMHT2TTbar->Reset();
-  for (int ibin=1;  ibin<=72; ibin++) searchBin_ClosureMHT2TTbar->SetBinContent(ibin,SearchBin_ClosureMHT2TTbar[ibin-1]); // -999. for non-applicable bins
-  searchBin_ClosureMHT3TTbar->Reset();
-  for (int ibin=1;  ibin<=72; ibin++) searchBin_ClosureMHT3TTbar->SetBinContent(ibin,SearchBin_ClosureMHT3TTbar[ibin-1]); // -999. for non-applicable bins
-
-  searchBin_ClosureTotal->Reset();
-  for (int ibin=1;  ibin<=72; ibin++){
-    //-----
-    if (searchBin_ClosureNj46->GetBinContent(ibin)>0.)
-      searchBin_ClosureTotal->SetBinContent(ibin,
-					    pow(pow(searchBin_ClosureNj46->GetBinContent(ibin),2)+pow(searchBin_ClosureTotal->GetBinContent(ibin),2),0.5)); 
-    if (searchBin_ClosureNj78->GetBinContent(ibin)>0.)
-      searchBin_ClosureTotal->SetBinContent(ibin,
-					    pow(pow(searchBin_ClosureNj78->GetBinContent(ibin),2)+pow(searchBin_ClosureTotal->GetBinContent(ibin),2),0.5)); 
-    if (searchBin_ClosureNj9->GetBinContent(ibin)>0.)
-      searchBin_ClosureTotal->SetBinContent(ibin,
-					    pow(pow(searchBin_ClosureNj9->GetBinContent(ibin),2)+pow(searchBin_ClosureTotal->GetBinContent(ibin),2),0.5)); 
-    //-----
-    if (searchBin_ClosureMHT2Wjets->GetBinContent(ibin)>0.)
-      searchBin_ClosureTotal->SetBinContent(ibin,
-					    pow(pow(searchBin_ClosureMHT2Wjets->GetBinContent(ibin),2)+pow(searchBin_ClosureTotal->GetBinContent(ibin),2),0.5)); 
-    if (searchBin_ClosureMHT3Wjets->GetBinContent(ibin)>0.)
-      searchBin_ClosureTotal->SetBinContent(ibin,
-					    pow(pow(searchBin_ClosureMHT3Wjets->GetBinContent(ibin),2)+pow(searchBin_ClosureTotal->GetBinContent(ibin),2),0.5)); 
-    if (searchBin_ClosureMHT2TTbar->GetBinContent(ibin)>0.)
-      searchBin_ClosureTotal->SetBinContent(ibin,
-					    pow(pow(searchBin_ClosureMHT2TTbar->GetBinContent(ibin),2)+pow(searchBin_ClosureTotal->GetBinContent(ibin),2),0.5)); 
-    if (searchBin_ClosureMHT3TTbar->GetBinContent(ibin)>0.)
-      searchBin_ClosureTotal->SetBinContent(ibin,
-					    pow(pow(searchBin_ClosureMHT3TTbar->GetBinContent(ibin),2)+pow(searchBin_ClosureTotal->GetBinContent(ibin),2),0.5)); 
-  }
-
-  // Creating template for uncertainty due to correction statistics
-  TH1D* searchBin_UncertaintyCorrectionStats = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/searchH_b_")->Clone("searchBin_UncertaintyCorrectionStats");
-  searchBin_UncertaintyCorrectionStats->Reset();
-
-  } // isys
-  */
-
-  //
-  // ----- QCD bin predicitons -----
-  //
-  TH1D* QCDBin_HiDphi_nominal  = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_HiDphi_nominal");
-  QCDBin_HiDphi_nominal->Scale(1/trigEff*lumiTarget/lumiControl);
-  TH1D* QCDBin_HiDphi_nominal_fullstatuncertainty = (TH1D*)QCDBin_HiDphi_nominal->Clone("QCDBin_HiDphi_nominal_fullstatuncertainty");
-  for (int ibin=0; ibin<QCDBin_HiDphi_nominal->GetNbinsX(); ibin++){
-    QCDBin_HiDphi_nominal_fullstatuncertainty->SetBinError(ibin+1,pow(pow(QCDBin_HiDphi_nominal->GetBinError(ibin+1),2)+pow(0.275,2),0.5));
-  }
-
-  TH1D* QCDBin_LowDphi_nominal = (TH1D*)DataEstFile->Get("QCD_Low")->Clone("QCDBin_LowDphi_nominal");
-  QCDBin_LowDphi_nominal->Scale(1/trigEff*lumiTarget/lumiControl);
-  TH1D* QCDBin_LowDphi_nominal_fullstatuncertainty = (TH1D*)QCDBin_LowDphi_nominal->Clone("QCDBin_LowDphi_nominal_fullstatuncertainty");
-  for (int ibin=0; ibin<QCDBin_LowDphi_nominal->GetNbinsX(); ibin++){
-    QCDBin_LowDphi_nominal_fullstatuncertainty->SetBinError(ibin+1,pow(pow(QCDBin_LowDphi_nominal->GetBinError(ibin+1),2)+pow(0.275,2),0.5));
-  }
-
-  //searchBin_closureUncertainty->Print("all");
-
-  //
-  // Convenient utility histogram
-  //
-  TH1D* QCDBin_one = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_one");
-  QCDBin_one->Reset();
-  for (int ibin=0; ibin<QCDBin_one->GetNbinsX(); ibin++){
-    QCDBin_one->SetBinContent(ibin+1,1.);
-    QCDBin_one->SetBinError(ibin+1,0.);
-  }
-
-  TH1D* QCDBin_box = (TH1D*)DataEstFile->Get("QCD_Up")->Clone("QCDBin_box");
-  QCDBin_box->Reset();
-  QCDBin_box->SetLineColor(0);
-
   // For closure systematics
   histname="QCD_Up";
   sprintf(tempname,"%s",histname.c_str());
@@ -579,6 +493,8 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   //
   TH1D * QCDBin_HiDphi_closureUncertainty = static_cast<TH1D*>(GenHist->Clone("QCDBin_HiDphi_closureUncertainty"));
   QCDBin_HiDphi_closureUncertainty->Reset();
+  QCDBin_HiDphi_closureUncertainty->SetFillColor(0);
+  QCDBin_HiDphi_closureUncertainty->SetLineColor(1);
 
   TH1D * QCDBin_HiDphi_closureRatio= static_cast<TH1D*>(GenHist->Clone("QCDBin_HiDphi_closureRatio"));
   TH1D * QCDBin_HiDphi_numerator   = static_cast<TH1D*>(GenHist->Clone("QCDBin_HiDphi_numerator"));
@@ -596,9 +512,11 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
     if (QCDBin_HiDphi_closureRatio->GetBinContent(ibin)!=0.){
       QCDBin_HiDphi_closure_stat_uncertainty_fractional[ibin] = QCDBin_HiDphi_closureRatio->GetBinError(ibin)/QCDBin_HiDphi_closureRatio->GetBinContent(ibin);
     }
+    /*
     std::cout << ibin << " "
 	      << QCDBin_HiDphi_closureRatio->GetBinContent(ibin)-1. << " "
 	      << QCDBin_HiDphi_closure_stat_uncertainty_fractional[ibin] << std::endl;
+    */
     double Unc;
     Unc = TMath::Max(fabs(QCDBin_HiDphi_closureRatio->GetBinContent(ibin)-1.),QCDBin_HiDphi_closure_stat_uncertainty_fractional[ibin]);
     if (Unc>1.) Unc=1.;
@@ -606,17 +524,14 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   }
   QCDBin_HiDphi_closureUncertainty->Print("all");
 
-  // Some additional variables
-  double QCDBinHiDphi_stat_uncertainty_fractional[221];
-  double QCDBinHiDphi_uncertainty_correction_stats_up[221];
-  double QCDBinHiDphi_uncertainty_correction_stats_dn[221];
-  double QCDBinHiDphi_uncertainty_correction_stats[221];
 
   //
   // Preparing ratio histograms: Expectation/Prediction for closure uncertainty
   //
   TH1D * QCDBin_LowDphi_closureUncertainty = static_cast<TH1D*>(GenHist->Clone("QCDBin_LowDphi_closureUncertainty"));
   QCDBin_LowDphi_closureUncertainty->Reset();
+  QCDBin_LowDphi_closureUncertainty->SetFillColor(0);
+  QCDBin_LowDphi_closureUncertainty->SetLineColor(1);
 
   TH1D * QCDBin_LowDphi_closureRatio= static_cast<TH1D*>(GenHist->Clone("QCDBin_LowDphi_closureRatio"));
   TH1D * QCDBin_LowDphi_numerator   = static_cast<TH1D*>(GenHist->Clone("QCDBin_LowDphi_numerator"));
@@ -633,9 +548,11 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
     if (QCDBin_LowDphi_closureRatio->GetBinContent(ibin)!=0.){
       QCDBin_LowDphi_closure_stat_uncertainty_fractional[ibin] = QCDBin_LowDphi_closureRatio->GetBinError(ibin)/QCDBin_LowDphi_closureRatio->GetBinContent(ibin);
     }
+    /*
     std::cout << ibin << " "
 	      << QCDBin_LowDphi_closureRatio->GetBinContent(ibin)-1. << " "
 	      << QCDBin_LowDphi_closure_stat_uncertainty_fractional[ibin] << std::endl;
+    */
     double Unc;
     Unc = TMath::Max(fabs(QCDBin_LowDphi_closureRatio->GetBinContent(ibin)-1.),QCDBin_LowDphi_closure_stat_uncertainty_fractional[ibin]);
     if (Unc>1.) Unc=1.;
@@ -643,564 +560,205 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   }
   QCDBin_LowDphi_closureUncertainty->Print("all");
 
-  // Some additional variables
-  double QCDBinLowDphi_stat_uncertainty_fractional[221];
-  double QCDBinLowDphi_uncertainty_correction_stats_up[221];
-  double QCDBinLowDphi_uncertainty_correction_stats_dn[221];
-  double QCDBinLowDphi_uncertainty_correction_stats[221];
-
-  
   //
-  // ----- 
-  //
-
-  for (int ibin=1;ibin<=72;ibin++){
-    // Stat uncertainty
-    searchBin_stat_uncertainty_fractional[ibin]=0.;
-    if (searchBin_nominal->GetBinContent(ibin)!=0.){
-      searchBin_StatUncertainties->SetBinContent(ibin,searchBin_nominal->GetBinError(ibin));
-      searchBin_stat_uncertainty_fractional[ibin] = searchBin_nominal_fullstatuncertainty->GetBinError(ibin)/searchBin_nominal->GetBinContent(ibin);
-      searchBin_StatUncertaintiesFractional->SetBinContent(ibin,searchBin_stat_uncertainty_fractional[ibin]);
-    } else {
-      searchBin_StatUncertaintiesFractional->SetBinContent(ibin,2.);
-    }
-  }
-
-  for (int ibin=1;ibin<=220;ibin++){
-    //
-    // Stat uncertainty
-    QCDBinHiDphi_stat_uncertainty_fractional[ibin]=0.;
-    if (QCDBin_HiDphi_nominal->GetBinContent(ibin)!=0.)
-      QCDBinHiDphi_stat_uncertainty_fractional[ibin] = QCDBin_HiDphi_nominal->GetBinError(ibin)/QCDBin_HiDphi_nominal->GetBinContent(ibin);    
-    //
-    // Stat uncertainty
-    QCDBinLowDphi_stat_uncertainty_fractional[ibin]=0.;
-    if (QCDBin_LowDphi_nominal->GetBinContent(ibin)!=0.)
-      QCDBinLowDphi_stat_uncertainty_fractional[ibin] = QCDBin_LowDphi_nominal->GetBinError(ibin)/QCDBin_LowDphi_nominal->GetBinContent(ibin);
-  }
-
-  /*
-  if (isys==1) {
-  // Stat uncertainty of search-bin-based correction factors
-  TH1D* QCDBin_HiDphi_AccUp = (TH1D*)DataEstFile->Get("AccMinus/delphi/QCD_")->Clone("QCDBin_HiDphi_AccUp");
-  TH1D* QCDBin_HiDphi_AccDn = (TH1D*)DataEstFile->Get("AccPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_AccDn");
-  TH1D* QCDBin_HiDphi_IsoUp = (TH1D*)DataEstFile->Get("IsoPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_IsoUp");
-  TH1D* QCDBin_HiDphi_IsoDn = (TH1D*)DataEstFile->Get("IsoMinus/delphi/QCD_")->Clone("QCDBin_HiDphi_IsoDn");
-  TH1D* QCDBin_HiDphi_MTUp = (TH1D*)DataEstFile->Get("MTMinus/delphi/QCD_")->Clone("QCDBin_HiDphi_MTUp");
-  TH1D* QCDBin_HiDphi_MTDn = (TH1D*)DataEstFile->Get("MTPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_MTDn");
-  TH1D* QCDBin_HiDphi_MuFromTauUp = (TH1D*)DataEstFile->Get("MuFromTauMinus/delphi/QCD_")->Clone("QCDBin_HiDphi_MuFromTauUp");
-  TH1D* QCDBin_HiDphi_MuFromTauDn = (TH1D*)DataEstFile->Get("MuFromTauPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_MuFromTauDn");
-  
-  QCDBin_HiDphi_AccUp->Add(QCDBin_HiDphi_nominal,-1.); QCDBin_HiDphi_AccUp->Divide(QCDBin_HiDphi_nominal);
-  QCDBin_HiDphi_AccDn->Add(QCDBin_HiDphi_nominal,-1.); QCDBin_HiDphi_AccDn->Divide(QCDBin_HiDphi_nominal);
-  QCDBin_HiDphi_IsoUp->Add(QCDBin_HiDphi_nominal,-1.); QCDBin_HiDphi_IsoUp->Divide(QCDBin_HiDphi_nominal);
-  QCDBin_HiDphi_IsoDn->Add(QCDBin_HiDphi_nominal,-1.); QCDBin_HiDphi_IsoDn->Divide(QCDBin_HiDphi_nominal);
-  QCDBin_HiDphi_MTUp->Add(QCDBin_HiDphi_nominal,-1.); QCDBin_HiDphi_MTUp->Divide(QCDBin_HiDphi_nominal);
-  QCDBin_HiDphi_MTDn->Add(QCDBin_HiDphi_nominal,-1.); QCDBin_HiDphi_MTDn->Divide(QCDBin_HiDphi_nominal);
-  QCDBin_HiDphi_MuFromTauUp->Add(QCDBin_HiDphi_nominal,-1.); QCDBin_HiDphi_MuFromTauUp->Divide(QCDBin_HiDphi_nominal);
-  QCDBin_HiDphi_MuFromTauDn->Add(QCDBin_HiDphi_nominal,-1.); QCDBin_HiDphi_MuFromTauDn->Divide(QCDBin_HiDphi_nominal);
-
-  // BMistag
-  TH1D* QCDBin_HiDphi_BMistagUp = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_BMistagUp");
-  TH1D* QCDBin_HiDphi_BMistagDn = (TH1D*)DataEstFile->Get("BMistagMinus/delphi/QCD_")->Clone("QCDBin_HiDphi_BMistagDn");
-  QCDBin_HiDphi_BMistagUp->Add(QCDBin_HiDphi_nominal,-1.); QCDBin_HiDphi_BMistagUp->Divide(QCDBin_HiDphi_nominal);
-  QCDBin_HiDphi_BMistagDn->Add(QCDBin_HiDphi_nominal,-1.); QCDBin_HiDphi_BMistagDn->Divide(QCDBin_HiDphi_nominal);
-
-  //
-  // Closure: 
-  // Njets=4  : 20%
-  // Njets=5  : 20%
-  // Njets=6  : 20%
-  // Njets=7-8: 40%
-  // Njets=9- : 60%
-  // MHT2 for Wjets-dominated region: 20%
-  // MHT3 for Wjets-dominated region: 30%
-  // MHT4 for Wjets-dominated region: 40%
-  // MHT2 for ttbar-dominated region: 20%
-  // MHT3 for ttbar-dominated region: 30%
-  // MHT3 for ttbar-dominated region: 40%
-  double QCDBinHiDphi_ClosureMHT2Wjets[220]    = {
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., // Njets=4
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., // Njets=5
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., // Njets=6
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=9-
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-  };
-  double QCDBinHiDphi_ClosureMHT3Wjets[220]    = {
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., // Njets=4
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., // Njets=5
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., // Njets=6
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=9-
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-  };
-  double QCDBinHiDphi_ClosureMHT4Wjets[220]    = {
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4, // Njets=4
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4, // Njets=5
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4, // Njets=6
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4, // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=9-
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-  };
-  double QCDBinHiDphi_ClosureMHT2TTbar[220]    = {
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=4
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=5
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=6
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=7-8
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., // Njets=9-
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.
-  };
-  double QCDBinHiDphi_ClosureMHT3TTbar[220]    = {
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=4
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=5
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=6
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., // Njets=9-
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.
-  };
-  double QCDBinHiDphi_ClosureMHT4TTbar[220]    = {
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=4
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=5
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=6
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4, // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4
-  };
-
-  //
-  TH1D* QCDBin_HiDphi_ClosureNj4  = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_ClosureNj4");
-  TH1D* QCDBin_HiDphi_ClosureNj5  = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_ClosureNj4");
-  TH1D* QCDBin_HiDphi_ClosureNj6  = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_ClosureNj4");
-  TH1D* QCDBin_HiDphi_ClosureNj78 = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_ClosureNj78");
-  TH1D* QCDBin_HiDphi_ClosureNj9  = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_ClosureNj9");
-  TH1D* QCDBin_HiDphi_ClosureMHT2Wjets = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_ClosureMHT2Wjets");
-  TH1D* QCDBin_HiDphi_ClosureMHT3Wjets = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_ClosureMHT3Wjets");
-  TH1D* QCDBin_HiDphi_ClosureMHT4Wjets = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_ClosureMHT4Wjets");
-  TH1D* QCDBin_HiDphi_ClosureMHT2TTbar = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_ClosureMHT2TTbar");
-  TH1D* QCDBin_HiDphi_ClosureMHT3TTbar = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_ClosureMHT3TTbar");
-  TH1D* QCDBin_HiDphi_ClosureMHT4TTbar = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBin_HiDphi_ClosureMHT4TTbar");
-  QCDBin_HiDphi_ClosureNj4->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_HiDphi_ClosureNj4->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=1;  ibin<=44; ibin++)  QCDBin_HiDphi_ClosureNj4->SetBinContent(ibin,0.30);
-  QCDBin_HiDphi_ClosureNj5->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_HiDphi_ClosureNj5->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=45; ibin<=88; ibin++)  QCDBin_HiDphi_ClosureNj5->SetBinContent(ibin,0.30);
-  QCDBin_HiDphi_ClosureNj6->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_HiDphi_ClosureNj6->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=89; ibin<=132; ibin++) QCDBin_HiDphi_ClosureNj6->SetBinContent(ibin,0.30);
-  QCDBin_HiDphi_ClosureNj78->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_HiDphi_ClosureNj78->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=133;ibin<=176; ibin++)  QCDBin_HiDphi_ClosureNj78->SetBinContent(ibin,0.40);
-  QCDBin_HiDphi_ClosureNj9->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_HiDphi_ClosureNj9->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=177;ibin<=220; ibin++) QCDBin_HiDphi_ClosureNj9->SetBinContent(ibin,0.60);
-
-  QCDBin_HiDphi_ClosureMHT2Wjets->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_HiDphi_ClosureMHT2Wjets->SetBinContent(ibin,QCDBinHiDphi_ClosureMHT2Wjets[ibin-1]); // -999. for non-applicable bins
-  QCDBin_HiDphi_ClosureMHT3Wjets->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_HiDphi_ClosureMHT3Wjets->SetBinContent(ibin,QCDBinHiDphi_ClosureMHT3Wjets[ibin-1]); // -999. for non-applicable bins
-  QCDBin_HiDphi_ClosureMHT4Wjets->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_HiDphi_ClosureMHT4Wjets->SetBinContent(ibin,QCDBinHiDphi_ClosureMHT4Wjets[ibin-1]); // -999. for non-applicable bins
-  QCDBin_HiDphi_ClosureMHT2TTbar->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_HiDphi_ClosureMHT2TTbar->SetBinContent(ibin,QCDBinHiDphi_ClosureMHT2TTbar[ibin-1]); // -999. for non-applicable bins
-  QCDBin_HiDphi_ClosureMHT3TTbar->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_HiDphi_ClosureMHT3TTbar->SetBinContent(ibin,QCDBinHiDphi_ClosureMHT3TTbar[ibin-1]); // -999. for non-applicable bins
-  QCDBin_HiDphi_ClosureMHT4TTbar->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_HiDphi_ClosureMHT4TTbar->SetBinContent(ibin,QCDBinHiDphi_ClosureMHT4TTbar[ibin-1]); // -999. for non-applicable bins
-  
-  // Creating template for uncertainty due to correction statistics
-  TH1D* QCDBin_HiDphi_UncertaintyCorrectionStats = (TH1D*)DataEstFile->Get("BMistagPlus/delphi/QCD_")->Clone("QCDBinHiDphi_UncertaintyCorrectionStats");
-  QCDBin_HiDphi_UncertaintyCorrectionStats->Reset();
-
-  } // isys==1
-  */
-
-
-  //
-  // ----- QCD bin predicitons -----
-  //
-
-  /*
-  if (isys==1){
-  // Stat uncertainty of search-bin-based correction factors
-  TH1D* QCDBin_LowDphi_AccUp = (TH1D*)DataEstFile->Get("AccMinus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_AccUp");
-  TH1D* QCDBin_LowDphi_AccDn = (TH1D*)DataEstFile->Get("AccPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_AccDn");
-  TH1D* QCDBin_LowDphi_IsoUp = (TH1D*)DataEstFile->Get("IsoPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_IsoUp");
-  TH1D* QCDBin_LowDphi_IsoDn = (TH1D*)DataEstFile->Get("IsoMinus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_IsoDn");
-  TH1D* QCDBin_LowDphi_MTUp = (TH1D*)DataEstFile->Get("MTMinus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_MTUp");
-  TH1D* QCDBin_LowDphi_MTDn = (TH1D*)DataEstFile->Get("MTPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_MTDn");
-  TH1D* QCDBin_LowDphi_MuFromTauUp = (TH1D*)DataEstFile->Get("MuFromTauMinus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_MuFromTauUp");
-  TH1D* QCDBin_LowDphi_MuFromTauDn = (TH1D*)DataEstFile->Get("MuFromTauPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_MuFromTauDn");
-  
-  QCDBin_LowDphi_AccUp->Add(QCDBin_LowDphi_nominal,-1.); QCDBin_LowDphi_AccUp->Divide(QCDBin_LowDphi_nominal);
-  QCDBin_LowDphi_AccDn->Add(QCDBin_LowDphi_nominal,-1.); QCDBin_LowDphi_AccDn->Divide(QCDBin_LowDphi_nominal);
-  QCDBin_LowDphi_IsoUp->Add(QCDBin_LowDphi_nominal,-1.); QCDBin_LowDphi_IsoUp->Divide(QCDBin_LowDphi_nominal);
-  QCDBin_LowDphi_IsoDn->Add(QCDBin_LowDphi_nominal,-1.); QCDBin_LowDphi_IsoDn->Divide(QCDBin_LowDphi_nominal);
-  QCDBin_LowDphi_MTUp->Add(QCDBin_LowDphi_nominal,-1.); QCDBin_LowDphi_MTUp->Divide(QCDBin_LowDphi_nominal);
-  QCDBin_LowDphi_MTDn->Add(QCDBin_LowDphi_nominal,-1.); QCDBin_LowDphi_MTDn->Divide(QCDBin_LowDphi_nominal);
-  QCDBin_LowDphi_MuFromTauUp->Add(QCDBin_LowDphi_nominal,-1.); QCDBin_LowDphi_MuFromTauUp->Divide(QCDBin_LowDphi_nominal);
-  QCDBin_LowDphi_MuFromTauDn->Add(QCDBin_LowDphi_nominal,-1.); QCDBin_LowDphi_MuFromTauDn->Divide(QCDBin_LowDphi_nominal);
-
-  // BMistag
-  TH1D* QCDBin_LowDphi_BMistagUp = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_BMistagUp");
-  TH1D* QCDBin_LowDphi_BMistagDn = (TH1D*)DataEstFile->Get("BMistagMinus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_BMistagDn");
-  QCDBin_LowDphi_BMistagUp->Add(QCDBin_LowDphi_nominal,-1.); QCDBin_LowDphi_BMistagUp->Divide(QCDBin_LowDphi_nominal);
-  QCDBin_LowDphi_BMistagDn->Add(QCDBin_LowDphi_nominal,-1.); QCDBin_LowDphi_BMistagDn->Divide(QCDBin_LowDphi_nominal);
-
-  //
-  // Closure: 
-  // Njets=4  : 20%
-  // Njets=5  : 20%
-  // Njets=6  : 20%
-  // Njets=7-8: 40%
-  // Njets=9- : 60%
-  // MHT2 for Wjets-dominated region: 20%
-  // MHT3 for Wjets-dominated region: 30%
-  // MHT4 for Wjets-dominated region: 40%
-  // MHT2 for ttbar-dominated region: 20%
-  // MHT3 for ttbar-dominated region: 30%
-  // MHT3 for ttbar-dominated region: 40%
-  double QCDBinLowDphi_ClosureMHT2Wjets[220]    = {
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., // Njets=4
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., // Njets=5
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., // Njets=6
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=9-
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-  };
-  double QCDBinLowDphi_ClosureMHT3Wjets[220]    = {
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., // Njets=4
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., // Njets=5
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., // Njets=6
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=9-
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-  };
-  double QCDBinLowDphi_ClosureMHT4Wjets[220]    = {
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4, // Njets=4
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4, // Njets=5
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4, // Njets=6
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4, // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=9-
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-  };
-  double QCDBinLowDphi_ClosureMHT2TTbar[220]    = {
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=4
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=5
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=6
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=7-8
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., // Njets=9-
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999., 
-    -999.,-999.,-999.,  0.2,  0.2,  0.2,-999.,-999.,-999.,-999.,-999.
-  };
-  double QCDBinLowDphi_ClosureMHT3TTbar[220]    = {
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=4
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=5
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=6
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., // Njets=9-
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999., 
-    -999.,-999.,-999.,-999.,-999.,-999.,  0.3,  0.3,  0.3,-999.,-999.
-  };
-  double QCDBinLowDphi_ClosureMHT4TTbar[220]    = {
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=4
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=5
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=6
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999., // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4, // Njets=7-8
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4,
-    -999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,-999.,  0.4,  0.4
-  };
-
-  //
-  TH1D* QCDBin_LowDphi_ClosureNj4  = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_ClosureNj4");
-  TH1D* QCDBin_LowDphi_ClosureNj5  = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_ClosureNj4");
-  TH1D* QCDBin_LowDphi_ClosureNj6  = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_ClosureNj4");
-  TH1D* QCDBin_LowDphi_ClosureNj78 = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_ClosureNj78");
-  TH1D* QCDBin_LowDphi_ClosureNj9  = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_ClosureNj9");
-  TH1D* QCDBin_LowDphi_ClosureMHT2Wjets = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_ClosureMHT2Wjets");
-  TH1D* QCDBin_LowDphi_ClosureMHT3Wjets = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_ClosureMHT3Wjets");
-  TH1D* QCDBin_LowDphi_ClosureMHT4Wjets = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_ClosureMHT4Wjets");
-  TH1D* QCDBin_LowDphi_ClosureMHT2TTbar = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_ClosureMHT2TTbar");
-  TH1D* QCDBin_LowDphi_ClosureMHT3TTbar = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_ClosureMHT3TTbar");
-  TH1D* QCDBin_LowDphi_ClosureMHT4TTbar = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBin_LowDphi_ClosureMHT4TTbar");
-  QCDBin_LowDphi_ClosureNj4->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_LowDphi_ClosureNj4->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=1;  ibin<=44; ibin++)  QCDBin_LowDphi_ClosureNj4->SetBinContent(ibin,0.30);
-  QCDBin_LowDphi_ClosureNj5->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_LowDphi_ClosureNj5->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=45; ibin<=88; ibin++)  QCDBin_LowDphi_ClosureNj5->SetBinContent(ibin,0.30);
-  QCDBin_LowDphi_ClosureNj6->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_LowDphi_ClosureNj6->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=89; ibin<=132; ibin++) QCDBin_LowDphi_ClosureNj6->SetBinContent(ibin,0.30);
-  QCDBin_LowDphi_ClosureNj78->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_LowDphi_ClosureNj78->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=133;ibin<=176; ibin++)  QCDBin_LowDphi_ClosureNj78->SetBinContent(ibin,0.40);
-  QCDBin_LowDphi_ClosureNj9->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_LowDphi_ClosureNj9->SetBinContent(ibin,-999.); // -999. for non-applicable bins
-  for (int ibin=177;ibin<=220; ibin++) QCDBin_LowDphi_ClosureNj9->SetBinContent(ibin,0.60);
-
-  QCDBin_LowDphi_ClosureMHT2Wjets->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_LowDphi_ClosureMHT2Wjets->SetBinContent(ibin,QCDBinLowDphi_ClosureMHT2Wjets[ibin-1]); // -999. for non-applicable bins
-  QCDBin_LowDphi_ClosureMHT3Wjets->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_LowDphi_ClosureMHT3Wjets->SetBinContent(ibin,QCDBinLowDphi_ClosureMHT3Wjets[ibin-1]); // -999. for non-applicable bins
-  QCDBin_LowDphi_ClosureMHT4Wjets->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_LowDphi_ClosureMHT4Wjets->SetBinContent(ibin,QCDBinLowDphi_ClosureMHT4Wjets[ibin-1]); // -999. for non-applicable bins
-  QCDBin_LowDphi_ClosureMHT2TTbar->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_LowDphi_ClosureMHT2TTbar->SetBinContent(ibin,QCDBinLowDphi_ClosureMHT2TTbar[ibin-1]); // -999. for non-applicable bins
-  QCDBin_LowDphi_ClosureMHT3TTbar->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_LowDphi_ClosureMHT3TTbar->SetBinContent(ibin,QCDBinLowDphi_ClosureMHT3TTbar[ibin-1]); // -999. for non-applicable bins
-  QCDBin_LowDphi_ClosureMHT4TTbar->Reset();
-  for (int ibin=1;  ibin<=220; ibin++) QCDBin_LowDphi_ClosureMHT4TTbar->SetBinContent(ibin,QCDBinLowDphi_ClosureMHT4TTbar[ibin-1]); // -999. for non-applicable bins
-
-  // Creating template for uncertainty due to correction statistics
-  TH1D* QCDBin_LowDphi_UncertaintyCorrectionStats = (TH1D*)DataEstFile->Get("BMistagPlus/low_Dphi/QCD_")->Clone("QCDBinLowDphi_UncertaintyCorrectionStats");
-  QCDBin_LowDphi_UncertaintyCorrectionStats->Reset();
-
-  } // isys==1
-  */
-
-  /*
-  if (isys==1){
-  //-----------------------------------------------------------------------------------------------------------------------------------------------------
-  //
-  // Check Individual Components - regular search bins
+  // ---- BMistag & MuRecoIso systematics -----
+  // -----------------------------------------------------
   // 
-  printf("\n");
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-  printf("Search bin");
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-  printf("bin#: Prediction:Stat(Frac): Acc Up/Dn  : Iso Up/Dn     : MT Up/Dn      : Mu Up/Dn    : Total from Correction Stats\n");
-  for (int ibin=1;ibin<=72;ibin++){
-    if (ibin==1 || ibin==25 || ibin==49) 
-      printf("------------------------------------------------------------------------------------------------------------------------\n");
-    //
-    // Uncertainty from correction statistics
-    searchBin_uncertainty_correction_stats_up[ibin]=pow(pow(searchBin_AccUp->GetBinContent(ibin),2)
-					      +pow(searchBin_IsoUp->GetBinContent(ibin),2)
-					      +pow(searchBin_MTUp->GetBinContent(ibin),2)
-					      +pow(searchBin_MuFromTauUp->GetBinContent(ibin),2)
-					     ,0.5);
-    searchBin_uncertainty_correction_stats_dn[ibin]=pow(pow(searchBin_AccUp->GetBinContent(ibin),2)
-					      +pow(searchBin_IsoUp->GetBinContent(ibin),2)
-					      +pow(searchBin_MTUp->GetBinContent(ibin),2)
-					      +pow(searchBin_MuFromTauUp->GetBinContent(ibin),2)
-					     ,0.5);
-    searchBin_uncertainty_correction_stats[ibin]=(searchBin_uncertainty_correction_stats_up[ibin]+searchBin_uncertainty_correction_stats_dn[ibin])/2.;
-    searchBin_UncertaintyCorrectionStats->SetBinContent(ibin,searchBin_uncertainty_correction_stats[ibin]);
-    //
-    printf("%4d: %10.3f: %6.3f: %6.3f, %6.3f: %6.3f, %6.3f: %6.3f, %6.3f: %6.3f, %6.3f: %8.3f\n",
-	   ibin,
-	   searchBin_nominal->GetBinContent(ibin),
-	   searchBin_stat_uncertainty_fractional[ibin],
-	   searchBin_AccUp->GetBinContent(ibin),
-	   searchBin_AccDn->GetBinContent(ibin),
-	   searchBin_IsoUp->GetBinContent(ibin),
-	   searchBin_IsoDn->GetBinContent(ibin),
-	   searchBin_MTUp->GetBinContent(ibin),
-	   searchBin_MTDn->GetBinContent(ibin),
-	   searchBin_MuFromTauUp->GetBinContent(ibin),
-	   searchBin_MuFromTauDn->GetBinContent(ibin),
-	   searchBin_UncertaintyCorrectionStats->GetBinContent(ibin)
-	   );
-  }
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
+  // From MC sys file
+  //
+  string histname="searchH_b_";
+  string cutname="delphi";
+  sprintf(tempname,"allEvents/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D * searchBin_default = (TH1D*)MCSysFile->Get(tempname)->Clone();
+
+  sprintf(tempname,"BMistagPlus/%s/%s",cutname.c_str(),histname.c_str());  
+  TH1D* searchBin_BMistagUp = (TH1D*)MCSysFile->Get(tempname)->Clone("searchBin_BMistagUp");
+  sprintf(tempname,"BMistagMinus/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D* searchBin_BMistagDn = (TH1D*)MCSysFile->Get(tempname)->Clone("searchBin_BMistagDn");
+  
+  sprintf(tempname,"RecoSysPlus/%s/%s",cutname.c_str(),histname.c_str());  
+  TH1D* searchBin_MuRecoSysUp = (TH1D*)MCSysFile->Get(tempname)->Clone("searchBin_MuRecoSysUp");
+  sprintf(tempname,"RecoSysMinus/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D* searchBin_MuRecoSysDn = (TH1D*)MCSysFile->Get(tempname)->Clone("searchBin_MuRecoSysDn");
+
+  sprintf(tempname,"IsoSysPlus/%s/%s",cutname.c_str(),histname.c_str());  
+  TH1D* searchBin_MuIsoSysUp = (TH1D*)MCSysFile->Get(tempname)->Clone("searchBin_MuIsoSysUp");
+  sprintf(tempname,"IsoSysMinus/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D* searchBin_MuIsoSysDn = (TH1D*)MCSysFile->Get(tempname)->Clone("searchBin_MuIsoSysDn");
+
+  sprintf(tempname,"MuRecoIsoPlus/%s/%s",cutname.c_str(),histname.c_str());  
+  TH1D* searchBin_MuRecoIsoUp = (TH1D*)MCSysFile->Get(tempname)->Clone("searchBin_MuRecoIsoUp");
+  sprintf(tempname,"MuRecoIsoMinus/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D* searchBin_MuRecoIsoDn = (TH1D*)MCSysFile->Get(tempname)->Clone("searchBin_MuRecoIsoDn");
 
   //
-  // After some grouping
-  // 
-  printf("\n");
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-  printf("bin#: Prediction:Stat(Frac):BMistag Up/Dn: From Corr Stats: Closure Njets=4-6,7-8,9-,MHT2Wjets,MHT3Wjets,MHT2TTbar,MHT3TTbar\n");
-  for (int ibin=1;ibin<=72;ibin++){
-    if (ibin==1 || ibin==25 || ibin==49) 
-      printf("------------------------------------------------------------------------------------------------------------------------\n");
-    //
-    printf("%4d: %10.3f: %6.3f:  %6.3f, %6.3f: %8.3f: %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f\n",
-	   ibin,
-	   searchBin_nominal->GetBinContent(ibin),
-	   searchBin_stat_uncertainty_fractional[ibin],
-	   searchBin_BMistagUp->GetBinContent(ibin),
-	   searchBin_BMistagDn->GetBinContent(ibin),
-	   searchBin_UncertaintyCorrectionStats->GetBinContent(ibin),
-	   searchBin_ClosureNj46->GetBinContent(ibin),
-	   searchBin_ClosureNj78->GetBinContent(ibin),
-	   searchBin_ClosureNj9->GetBinContent(ibin),
-	   searchBin_ClosureMHT2Wjets->GetBinContent(ibin),
-	   searchBin_ClosureMHT3Wjets->GetBinContent(ibin),
-	   searchBin_ClosureMHT2TTbar->GetBinContent(ibin),
-	   searchBin_ClosureMHT3TTbar->GetBinContent(ibin)
-	   );
-  }
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-  }
-  */
+  string histname="QCD_";
+  string cutname="delphi";
+  sprintf(tempname,"allEvents/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D * QCDBin_HiDphi_default = (TH1D*)MCSysFile->Get(tempname)->Clone();
+
+  sprintf(tempname,"BMistagPlus/%s/%s",cutname.c_str(),histname.c_str());  
+  TH1D* QCDBin_HiDphi_BMistagUp = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_HiDphi_BMistagUp");
+  sprintf(tempname,"BMistagMinus/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D* QCDBin_HiDphi_BMistagDn = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_HiDphi_BMistagDn");
+  
+  sprintf(tempname,"RecoSysPlus/%s/%s",cutname.c_str(),histname.c_str());  
+  TH1D* QCDBin_HiDphi_MuRecoSysUp = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_HiDphi_MuRecoSysUp");
+  sprintf(tempname,"RecoSysMinus/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D* QCDBin_HiDphi_MuRecoSysDn = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_HiDphi_MuRecoSysDn");
+
+  sprintf(tempname,"IsoSysPlus/%s/%s",cutname.c_str(),histname.c_str());  
+  TH1D* QCDBin_HiDphi_MuIsoSysUp = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_HiDphi_MuIsoSysUp");
+  sprintf(tempname,"IsoSysMinus/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D* QCDBin_HiDphi_MuIsoSysDn = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_HiDphi_MuIsoSysDn");
+
+  sprintf(tempname,"MuRecoIsoPlus/%s/%s",cutname.c_str(),histname.c_str());  
+  TH1D* QCDBin_HiDphi_MuRecoIsoUp = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_HiDphi_MuRecoIsoUp");
+  sprintf(tempname,"MuRecoIsoMinus/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D* QCDBin_HiDphi_MuRecoIsoDn = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_HiDphi_MuRecoIsoDn");
+
+  //
+  string histname="QCD_";
+  string cutname="low_Dphi";
+  sprintf(tempname,"allEvents/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D * QCDBin_LowDphi_default = (TH1D*)MCSysFile->Get(tempname)->Clone();
+
+  sprintf(tempname,"BMistagPlus/%s/%s",cutname.c_str(),histname.c_str());  
+  TH1D* QCDBin_LowDphi_BMistagUp = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_LowDphi_BMistagUp");
+  sprintf(tempname,"BMistagMinus/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D* QCDBin_LowDphi_BMistagDn = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_LowDphi_BMistagDn");
+  
+  sprintf(tempname,"RecoSysPlus/%s/%s",cutname.c_str(),histname.c_str());  
+  TH1D* QCDBin_LowDphi_MuRecoSysUp = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_LowDphi_MuRecoSysUp");
+  sprintf(tempname,"RecoSysMinus/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D* QCDBin_LowDphi_MuRecoSysDn = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_LowDphi_MuRecoSysDn");
+
+  sprintf(tempname,"IsoSysPlus/%s/%s",cutname.c_str(),histname.c_str());  
+  TH1D* QCDBin_LowDphi_MuIsoSysUp = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_LowDphi_MuIsoSysUp");
+  sprintf(tempname,"IsoSysMinus/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D* QCDBin_LowDphi_MuIsoSysDn = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_LowDphi_MuIsoSysDn");
+
+  sprintf(tempname,"MuRecoIsoPlus/%s/%s",cutname.c_str(),histname.c_str());  
+  TH1D* QCDBin_LowDphi_MuRecoIsoUp = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_LowDphi_MuRecoIsoUp");
+  sprintf(tempname,"MuRecoIsoMinus/%s/%s",cutname.c_str(),histname.c_str());
+  TH1D* QCDBin_LowDphi_MuRecoIsoDn = (TH1D*)MCSysFile->Get(tempname)->Clone("QCDBin_LowDphi_MuRecoIsoDn");
+
+  //
+  // search bin
+  // ----------
+  takeDiffForSys(searchBin_BMistagUp,searchBin_default);
+  takeDiffForSys(searchBin_BMistagDn,searchBin_default);
+
+  takeDiffForSys(searchBin_MuRecoSysUp,searchBin_default);
+  takeDiffForSys(searchBin_MuRecoSysDn,searchBin_default);
+
+  takeDiffForSys(searchBin_MuIsoSysUp,searchBin_default);
+  takeDiffForSys(searchBin_MuIsoSysDn,searchBin_default);
+
+  takeDiffForSys(searchBin_MuRecoIsoUp,searchBin_default);
+  takeDiffForSys(searchBin_MuRecoIsoDn,searchBin_default);
+
+  //
+  // QCDBin HiDphi
+  // -------------
+  takeDiffForSys(QCDBin_HiDphi_BMistagUp,QCDBin_HiDphi_default);
+  takeDiffForSys(QCDBin_HiDphi_BMistagDn,QCDBin_HiDphi_default);
+
+  takeDiffForSys(QCDBin_HiDphi_MuRecoSysUp,QCDBin_HiDphi_default);
+  takeDiffForSys(QCDBin_HiDphi_MuRecoSysDn,QCDBin_HiDphi_default);
+
+  takeDiffForSys(QCDBin_HiDphi_MuIsoSysUp,QCDBin_HiDphi_default);
+  takeDiffForSys(QCDBin_HiDphi_MuIsoSysDn,QCDBin_HiDphi_default);
+
+  takeDiffForSys(QCDBin_HiDphi_MuRecoIsoUp,QCDBin_HiDphi_default);
+  takeDiffForSys(QCDBin_HiDphi_MuRecoIsoDn,QCDBin_HiDphi_default);
+
+  //
+  // QCDBin LowDphi
+  // --------------
+  takeDiffForSys(QCDBin_LowDphi_BMistagUp,QCDBin_LowDphi_default);
+  takeDiffForSys(QCDBin_LowDphi_BMistagDn,QCDBin_LowDphi_default);
+
+  takeDiffForSys(QCDBin_LowDphi_MuRecoSysUp,QCDBin_LowDphi_default);
+  takeDiffForSys(QCDBin_LowDphi_MuRecoSysDn,QCDBin_LowDphi_default);
+
+  takeDiffForSys(QCDBin_LowDphi_MuIsoSysUp,QCDBin_LowDphi_default);
+  takeDiffForSys(QCDBin_LowDphi_MuIsoSysDn,QCDBin_LowDphi_default);
+
+  takeDiffForSys(QCDBin_LowDphi_MuRecoIsoUp,QCDBin_LowDphi_default);
+  takeDiffForSys(QCDBin_LowDphi_MuRecoIsoDn,QCDBin_LowDphi_default);
+
+  //
+  // ---- JEC & MT cut efficiency systematics -----
+  // -----------------------------------------------------
+  //
+  // JEC & MT cut efficiency
+  //
+  string histname="searchH_b";
+  sprintf(tempname,"%s",histname.c_str());
+  tempstack=(THStack*)JECSysUpFile->Get(tempname)->Clone("searchBin_JECSysUp");  
+  TH1D * searchBin_JECSysUp  = (TH1D*) tempstack->GetStack()->Last();
+  tempstack=(THStack*)JECSysDnFile->Get(tempname)->Clone("searchBin_JECSysDn");  
+  TH1D * searchBin_JECSysDn  = (TH1D*) tempstack->GetStack()->Last();
+  tempstack=(THStack*)JECSysRefFile->Get(tempname)->Clone("searchBin_JECSysRef");  
+  TH1D * searchBin_JECSysRef = (TH1D*) tempstack->GetStack()->Last();
+
+  tempstack=(THStack*)MTSysUpFile->Get(tempname)->Clone("searchBin_MTSysUp");  
+  TH1D * searchBin_MTSysUp  = (TH1D*) tempstack->GetStack()->Last();
+  tempstack=(THStack*)MTSysDnFile->Get(tempname)->Clone("searchBin_MTSysDn");  
+  TH1D * searchBin_MTSysDn  = (TH1D*) tempstack->GetStack()->Last();
+  tempstack=(THStack*)MTSysRefFile->Get(tempname)->Clone("searchBin_MTSysRef");  
+  TH1D * searchBin_MTSysRef = (TH1D*) tempstack->GetStack()->Last();
+  
+  takeDiffForSys(searchBin_JECSysUp,searchBin_JECSysRef);
+  takeDiffForSys(searchBin_JECSysDn,searchBin_JECSysRef);
+  takeDiffForSys(searchBin_MTSysUp,searchBin_MTSysRef);
+  takeDiffForSys(searchBin_MTSysDn,searchBin_MTSysRef);
+
+
+  string histname="QCD_Up";
+  sprintf(tempname,"%s",histname.c_str());
+  tempstack=(THStack*)JECSysUpFile->Get(tempname)->Clone("QCDBin_HiDphi_JECSysUp");  
+  TH1D * QCDBin_HiDphi_JECSysUp  = (TH1D*) tempstack->GetStack()->Last();
+  tempstack=(THStack*)JECSysDnFile->Get(tempname)->Clone("QCDBin_HiDphi_JECSysDn");  
+  TH1D * QCDBin_HiDphi_JECSysDn  = (TH1D*) tempstack->GetStack()->Last();
+  tempstack=(THStack*)JECSysRefFile->Get(tempname)->Clone("QCDBin_HiDphi_JECSysRef");  
+  TH1D * QCDBin_HiDphi_JECSysRef = (TH1D*) tempstack->GetStack()->Last();
+
+  tempstack=(THStack*)MTSysUpFile->Get(tempname)->Clone("QCDBin_HiDphi_MTSysUp");  
+  TH1D * QCDBin_HiDphi_MTSysUp  = (TH1D*) tempstack->GetStack()->Last();
+  tempstack=(THStack*)MTSysDnFile->Get(tempname)->Clone("QCDBin_HiDphi_MTSysDn");  
+  TH1D * QCDBin_HiDphi_MTSysDn  = (TH1D*) tempstack->GetStack()->Last();
+  tempstack=(THStack*)MTSysRefFile->Get(tempname)->Clone("QCDBin_HiDphi_MTSysRef");  
+  TH1D * QCDBin_HiDphi_MTSysRef = (TH1D*) tempstack->GetStack()->Last();
+  
+  takeDiffForSys(QCDBin_HiDphi_JECSysUp,QCDBin_HiDphi_JECSysRef);
+  takeDiffForSys(QCDBin_HiDphi_JECSysDn,QCDBin_HiDphi_JECSysRef);
+  takeDiffForSys(QCDBin_HiDphi_MTSysUp,QCDBin_HiDphi_MTSysRef);
+  takeDiffForSys(QCDBin_HiDphi_MTSysDn,QCDBin_HiDphi_MTSysRef);
+
+
+  string histname="QCD_Low";
+  sprintf(tempname,"%s",histname.c_str());
+  tempstack=(THStack*)JECSysUpFile->Get(tempname)->Clone("QCDBin_LowDphi_JECSysUp");  
+  TH1D * QCDBin_LowDphi_JECSysUp  = (TH1D*) tempstack->GetStack()->Last();
+  tempstack=(THStack*)JECSysDnFile->Get(tempname)->Clone("QCDBin_LowDphi_JECSysDn");  
+  TH1D * QCDBin_LowDphi_JECSysDn  = (TH1D*) tempstack->GetStack()->Last();
+  tempstack=(THStack*)JECSysRefFile->Get(tempname)->Clone("QCDBin_LowDphi_JECSysRef");  
+  TH1D * QCDBin_LowDphi_JECSysRef = (TH1D*) tempstack->GetStack()->Last();
+
+  tempstack=(THStack*)MTSysUpFile->Get(tempname)->Clone("QCDBin_LowDphi_MTSysUp");  
+  TH1D * QCDBin_LowDphi_MTSysUp  = (TH1D*) tempstack->GetStack()->Last();
+  tempstack=(THStack*)MTSysDnFile->Get(tempname)->Clone("QCDBin_LowDphi_MTSysDn");  
+  TH1D * QCDBin_LowDphi_MTSysDn  = (TH1D*) tempstack->GetStack()->Last();
+  tempstack=(THStack*)MTSysRefFile->Get(tempname)->Clone("QCDBin_LowDphi_MTSysRef");  
+  TH1D * QCDBin_LowDphi_MTSysRef = (TH1D*) tempstack->GetStack()->Last();
+  
+  takeDiffForSys(QCDBin_LowDphi_JECSysUp,QCDBin_LowDphi_JECSysRef);
+  takeDiffForSys(QCDBin_LowDphi_JECSysDn,QCDBin_LowDphi_JECSysRef);
+  takeDiffForSys(QCDBin_LowDphi_MTSysUp,QCDBin_LowDphi_MTSysRef);
+  takeDiffForSys(QCDBin_LowDphi_MTSysDn,QCDBin_LowDphi_MTSysRef);
+
 
   //-----------------------------------------------------------------------------------------------------------------------------------------------------
   // 
@@ -1239,13 +797,21 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   searchBin_BMistagDn->SetLineStyle(2);
   searchBin_BMistagDn->Draw("hist,same");
 
-  searchBin_MuRecoIsoSysUp->SetLineColor(4);
-  searchBin_MuRecoIsoSysUp->SetLineWidth(2);
-  searchBin_MuRecoIsoSysUp->SetLineStyle(2);
-  searchBin_MuRecoIsoSysDn->SetLineColor(4);
-  searchBin_MuRecoIsoSysDn->SetLineWidth(2);
-  searchBin_MuRecoIsoSysUp->Draw("hist,same");
-  searchBin_MuRecoIsoSysDn->Draw("hist,same");
+  searchBin_MuRecoSysUp->SetLineColor(4);
+  searchBin_MuRecoSysUp->SetLineWidth(2);
+  searchBin_MuRecoSysUp->SetLineStyle(2);
+  searchBin_MuRecoSysDn->SetLineColor(4);
+  searchBin_MuRecoSysDn->SetLineWidth(2);
+  searchBin_MuRecoSysUp->Draw("hist,same");
+  searchBin_MuRecoSysDn->Draw("hist,same");
+
+  searchBin_MuIsoSysUp->SetLineColor(4);
+  searchBin_MuIsoSysUp->SetLineWidth(2);
+  searchBin_MuIsoSysUp->SetLineStyle(2);
+  searchBin_MuIsoSysDn->SetLineColor(4);
+  searchBin_MuIsoSysDn->SetLineWidth(2);
+  searchBin_MuIsoSysUp->Draw("hist,same");
+  searchBin_MuIsoSysDn->Draw("hist,same");
 
   searchBin_JECSysUp->SetFillColor(0);
   searchBin_JECSysDn->SetFillColor(0);
@@ -1415,7 +981,7 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   sprintf(tempname,"B-tag mistag modeling uncertainties");
   catLeg1->AddEntry(searchBin_BMistagUp,tempname);
   sprintf(tempname,"Muon efficiency uncertainties");
-  catLeg1->AddEntry(searchBin_MuRecoIsoSysDn,tempname);
+  catLeg1->AddEntry(searchBin_MuRecoSysDn,tempname);
   catLeg1->Draw();
 
   TLegend* catLeg1b = new TLegend(legendX1+0.25,legendY1,legendX2+0.25,legendY2);
@@ -1473,8 +1039,8 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
 
   searchBin_BMistagDn->Draw("hist,same");
 
-  searchBin_MuRecoIsoSysUp->Draw("hist,same");
-  searchBin_MuRecoIsoSysDn->Draw("hist,same");
+  searchBin_MuRecoSysUp->Draw("hist,same");
+  searchBin_MuRecoSysDn->Draw("hist,same");
 
   searchBin_JECSysUp->Draw("hist,same");
   searchBin_JECSysDn->Draw("hist,same");
@@ -1601,7 +1167,7 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   sprintf(tempname,"B-tag mistag modeling uncertainties");
   catLeg1->AddEntry(searchBin_BMistagUp,tempname);
   sprintf(tempname,"Muon efficiency uncertainties");
-  catLeg1->AddEntry(searchBin_MuRecoIsoSysDn,tempname);
+  catLeg1->AddEntry(searchBin_MuRecoSysDn,tempname);
   catLeg1->Draw();
 
   catLeg1b->Draw();
@@ -1628,8 +1194,8 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   searchBin_BMistagUp->Draw("hist,same");
   searchBin_BMistagDn->Draw("hist,same");
 
-  searchBin_MuRecoIsoSysUp->Draw("hist,same");
-  searchBin_MuRecoIsoSysDn->Draw("hist,same");
+  searchBin_MuRecoSysUp->Draw("hist,same");
+  searchBin_MuRecoSysDn->Draw("hist,same");
 
   //searchBin_JECSysUp->Draw("hist,same");
   //searchBin_JECSysDn->Draw("hist,same");
@@ -1762,8 +1328,8 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   //searchBin_BMistagUp->Draw("hist,same");
   //searchBin_BMistagDn->Draw("hist,same");
 
-  //searchBin_MuRecoIsoSysUp->Draw("hist,same");
-  //searchBin_MuRecoIsoSysDn->Draw("hist,same");
+  //searchBin_MuRecoSysUp->Draw("hist,same");
+  //searchBin_MuRecoSysDn->Draw("hist,same");
 
   searchBin_JECSysUp->Draw("hist,same");
   searchBin_JECSysDn->Draw("hist,same");
@@ -1932,8 +1498,8 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   //searchBin_BMistagUp->Draw("hist,same");
   //searchBin_BMistagDn->Draw("hist,same");
 
-  //searchBin_MuRecoIsoSysUp->Draw("hist,same");
-  //searchBin_MuRecoIsoSysDn->Draw("hist,same");
+  //searchBin_MuRecoSysUp->Draw("hist,same");
+  //searchBin_MuRecoSysDn->Draw("hist,same");
 
   //searchBin_JECSysUp->Draw("hist,same");
   //searchBin_JECSysDn->Draw("hist,same");
@@ -2055,160 +1621,8 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   sprintf(tempname,"searchBin_UncertaintySummary2c.pdf");
   tc2c->SaveAs(tempname);
     
-  /*
   //-----------------------------------------------------------------------------------------------------------------------------------------------------
   //
-  // QCD HiDphi -
-  // 
-  printf("\n");
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-  printf("QCD bin HiDphi");
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-  printf("bin#: Prediction:Stat(Frac): Acc Up/Dn  : Iso Up/Dn     : MT Up/Dn      : Mu Up/Dn    : Total from Correction Stats\n");
-  for (int ibin=1;ibin<=220;ibin++){
-    if (ibin==1 || ibin==45 || ibin==89 || ibin==133 || ibin==177) 
-      printf("------------------------------------------------------------------------------------------------------------------------\n");
-    //
-    // Uncertainty from correction statistics
-    QCDBinHiDphi_uncertainty_correction_stats_up[ibin]=pow(pow(QCDBin_HiDphi_AccUp->GetBinContent(ibin),2)
-					      +pow(QCDBin_HiDphi_IsoUp->GetBinContent(ibin),2)
-					      +pow(QCDBin_HiDphi_MTUp->GetBinContent(ibin),2)
-					      +pow(QCDBin_HiDphi_MuFromTauUp->GetBinContent(ibin),2)
-					     ,0.5);
-    QCDBinHiDphi_uncertainty_correction_stats_dn[ibin]=pow(pow(QCDBin_HiDphi_AccUp->GetBinContent(ibin),2)
-					      +pow(QCDBin_HiDphi_IsoUp->GetBinContent(ibin),2)
-					      +pow(QCDBin_HiDphi_MTUp->GetBinContent(ibin),2)
-					      +pow(QCDBin_HiDphi_MuFromTauUp->GetBinContent(ibin),2)
-					     ,0.5);
-    QCDBinHiDphi_uncertainty_correction_stats[ibin]=(QCDBinHiDphi_uncertainty_correction_stats_up[ibin]+QCDBinHiDphi_uncertainty_correction_stats_dn[ibin])/2.;
-    QCDBin_HiDphi_UncertaintyCorrectionStats->SetBinContent(ibin,QCDBinHiDphi_uncertainty_correction_stats[ibin]);
-    //
-    printf("%4d: %10.3f: %6.3f: %6.3f, %6.3f: %6.3f, %6.3f: %6.3f, %6.3f: %6.3f, %6.3f: %8.3f\n",
-	   ibin,
-	   QCDBin_HiDphi_nominal->GetBinContent(ibin),
-	   QCDBinHiDphi_stat_uncertainty_fractional[ibin],
-	   QCDBin_HiDphi_AccUp->GetBinContent(ibin),
-	   QCDBin_HiDphi_AccDn->GetBinContent(ibin),
-	   QCDBin_HiDphi_IsoUp->GetBinContent(ibin),
-	   QCDBin_HiDphi_IsoDn->GetBinContent(ibin),
-	   QCDBin_HiDphi_MTUp->GetBinContent(ibin),
-	   QCDBin_HiDphi_MTDn->GetBinContent(ibin),
-	   QCDBin_HiDphi_MuFromTauUp->GetBinContent(ibin),
-	   QCDBin_HiDphi_MuFromTauDn->GetBinContent(ibin),
-	   QCDBin_HiDphi_UncertaintyCorrectionStats->GetBinContent(ibin)
-	   );
-  }
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-
-  //
-  // After some grouping
-  // 
-  printf("\n");
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-  printf("bin#: Prediction:Stat(Frac):BMistag Up/Dn: From Corr Stats: Closure Njets=4,5,6,7-8,9-,MHT2Wjets,MHT3Wjets,MHT2TTbar,MHT3TTbar\n");
-  for (int ibin=1;ibin<=220;ibin++){
-    if (ibin==1 || ibin==45 || ibin==89 || ibin==133 || ibin==177) 
-      printf("------------------------------------------------------------------------------------------------------------------------\n");
-    //
-    printf("%4d: %10.3f: %6.3f:  %6.3f, %6.3f: %8.3f: %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f\n",
-	   ibin,
-	   QCDBin_HiDphi_nominal->GetBinContent(ibin),
-	   QCDBinHiDphi_stat_uncertainty_fractional[ibin],
-	   QCDBin_HiDphi_BMistagUp->GetBinContent(ibin),
-	   QCDBin_HiDphi_BMistagDn->GetBinContent(ibin),
-	   QCDBin_HiDphi_UncertaintyCorrectionStats->GetBinContent(ibin),
-	   QCDBin_HiDphi_ClosureNj4->GetBinContent(ibin),
-	   QCDBin_HiDphi_ClosureNj5->GetBinContent(ibin),
-	   QCDBin_HiDphi_ClosureNj6->GetBinContent(ibin),
-	   QCDBin_HiDphi_ClosureNj78->GetBinContent(ibin),
-	   QCDBin_HiDphi_ClosureNj9->GetBinContent(ibin),
-	   QCDBin_HiDphi_ClosureMHT2Wjets->GetBinContent(ibin),
-	   QCDBin_HiDphi_ClosureMHT3Wjets->GetBinContent(ibin),
-	   QCDBin_HiDphi_ClosureMHT4Wjets->GetBinContent(ibin),
-	   QCDBin_HiDphi_ClosureMHT2TTbar->GetBinContent(ibin),
-	   QCDBin_HiDphi_ClosureMHT3TTbar->GetBinContent(ibin),
-	   QCDBin_HiDphi_ClosureMHT4TTbar->GetBinContent(ibin)
-	   );
-  }
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
- 
-  //-----------------------------------------------------------------------------------------------------------------------------------------------------
-  //
-  // QCD LowDphi -
-  // 
-  printf("\n");
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-  printf("QCD bin LowDphi");
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-  printf("bin#: Prediction:Stat(Frac): Acc Up/Dn  : Iso Up/Dn     : MT Up/Dn      : Mu Up/Dn    : Total from Correction Stats\n");
-  for (int ibin=1;ibin<=220;ibin++){
-    if (ibin==1 || ibin==45 || ibin==89 || ibin==133 || ibin==177) 
-      printf("------------------------------------------------------------------------------------------------------------------------\n");
-    //
-    // Uncertainty from correction statistics
-    QCDBinLowDphi_uncertainty_correction_stats_up[ibin]=pow(pow(QCDBin_LowDphi_AccUp->GetBinContent(ibin),2)
-					      +pow(QCDBin_LowDphi_IsoUp->GetBinContent(ibin),2)
-					      +pow(QCDBin_LowDphi_MTUp->GetBinContent(ibin),2)
-					      +pow(QCDBin_LowDphi_MuFromTauUp->GetBinContent(ibin),2)
-					     ,0.5);
-    QCDBinLowDphi_uncertainty_correction_stats_dn[ibin]=pow(pow(QCDBin_LowDphi_AccUp->GetBinContent(ibin),2)
-					      +pow(QCDBin_LowDphi_IsoUp->GetBinContent(ibin),2)
-					      +pow(QCDBin_LowDphi_MTUp->GetBinContent(ibin),2)
-					      +pow(QCDBin_LowDphi_MuFromTauUp->GetBinContent(ibin),2)
-					     ,0.5);
-    QCDBinLowDphi_uncertainty_correction_stats[ibin]=(QCDBinLowDphi_uncertainty_correction_stats_up[ibin]+QCDBinLowDphi_uncertainty_correction_stats_dn[ibin])/2.;
-    QCDBin_LowDphi_UncertaintyCorrectionStats->SetBinContent(ibin,QCDBinLowDphi_uncertainty_correction_stats[ibin]);
-    //
-    printf("%4d: %10.3f: %6.3f: %6.3f, %6.3f: %6.3f, %6.3f: %6.3f, %6.3f: %6.3f, %6.3f: %8.3f\n",
-	   ibin,
-	   QCDBin_LowDphi_nominal->GetBinContent(ibin),
-	   QCDBinLowDphi_stat_uncertainty_fractional[ibin],
-	   QCDBin_LowDphi_AccUp->GetBinContent(ibin),
-	   QCDBin_LowDphi_AccDn->GetBinContent(ibin),
-	   QCDBin_LowDphi_IsoUp->GetBinContent(ibin),
-	   QCDBin_LowDphi_IsoDn->GetBinContent(ibin),
-	   QCDBin_LowDphi_MTUp->GetBinContent(ibin),
-	   QCDBin_LowDphi_MTDn->GetBinContent(ibin),
-	   QCDBin_LowDphi_MuFromTauUp->GetBinContent(ibin),
-	   QCDBin_LowDphi_MuFromTauDn->GetBinContent(ibin),
-	   QCDBin_LowDphi_UncertaintyCorrectionStats->GetBinContent(ibin)
-	   );
-  }
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-
-  //
-  // After some grouping
-  // 
-  printf("\n");
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-  printf("bin#: Prediction:Stat(Frac):BMistag Up/Dn: From Corr Stats: Closure Njets=4,5,6,7-8,9-,MHT2Wjets,MHT3Wjets,MHT2TTbar,MHT3TTbar\n");
-  for (int ibin=1;ibin<=220;ibin++){
-    if (ibin==1 || ibin==45 || ibin==89 || ibin==133 || ibin==177) 
-      printf("------------------------------------------------------------------------------------------------------------------------\n");
-    //
-    printf("%4d: %10.3f: %6.3f:  %6.3f, %6.3f: %8.3f: %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f, %8.3f\n",
-	   ibin,
-	   QCDBin_LowDphi_nominal->GetBinContent(ibin),
-	   QCDBinLowDphi_stat_uncertainty_fractional[ibin],
-	   QCDBin_LowDphi_BMistagUp->GetBinContent(ibin),
-	   QCDBin_LowDphi_BMistagDn->GetBinContent(ibin),
-	   QCDBin_LowDphi_UncertaintyCorrectionStats->GetBinContent(ibin),
-	   QCDBin_LowDphi_ClosureNj4->GetBinContent(ibin),
-	   QCDBin_LowDphi_ClosureNj5->GetBinContent(ibin),
-	   QCDBin_LowDphi_ClosureNj6->GetBinContent(ibin),
-	   QCDBin_LowDphi_ClosureNj78->GetBinContent(ibin),
-	   QCDBin_LowDphi_ClosureNj9->GetBinContent(ibin),
-	   QCDBin_LowDphi_ClosureMHT2Wjets->GetBinContent(ibin),
-	   QCDBin_LowDphi_ClosureMHT3Wjets->GetBinContent(ibin),
-	   QCDBin_LowDphi_ClosureMHT4Wjets->GetBinContent(ibin),
-	   QCDBin_LowDphi_ClosureMHT2TTbar->GetBinContent(ibin),
-	   QCDBin_LowDphi_ClosureMHT3TTbar->GetBinContent(ibin),
-	   QCDBin_LowDphi_ClosureMHT4TTbar->GetBinContent(ibin)
-	   );
-  }
-  printf("------------------------------------------------------------------------------------------------------------------------\n");
-  }
-  */
 
   //
   // Store outputs
@@ -2223,8 +1637,12 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   searchBin_closureUncertainty->Add(searchBin_one);       searchBin_closureUncertainty->Write();
   searchBin_BMistagUp->Add(searchBin_one);                searchBin_BMistagUp->Write();
   searchBin_BMistagDn->Add(searchBin_one);                searchBin_BMistagDn->Write();
-  searchBin_MuRecoIsoSysUp->Add(searchBin_one);           searchBin_MuRecoIsoSysUp->Write();
-  searchBin_MuRecoIsoSysDn->Add(searchBin_one);           searchBin_MuRecoIsoSysDn->Write();
+  searchBin_MuRecoSysUp->Add(searchBin_one);              searchBin_MuRecoSysUp->Write();
+  searchBin_MuRecoSysDn->Add(searchBin_one);              searchBin_MuRecoSysDn->Write();
+  searchBin_MuIsoSysUp->Add(searchBin_one);               searchBin_MuIsoSysUp->Write();
+  searchBin_MuIsoSysDn->Add(searchBin_one);               searchBin_MuIsoSysDn->Write();
+  searchBin_MuRecoIsoUp->Add(searchBin_one);              searchBin_MuRecoIsoUp->Write();
+  searchBin_MuRecoIsoDn->Add(searchBin_one);              searchBin_MuRecoIsoDn->Write();
   searchBin_JECSysUp->Add(searchBin_one);                 searchBin_JECSysUp->Write("searchBin_JECSysUp");
   searchBin_JECSysDn->Add(searchBin_one);                 searchBin_JECSysDn->Write("searchBin_JECSysDn");
   searchBin_MTSysUp->Add(searchBin_one);                  searchBin_MTSysUp->Write("searchBin_MTSysUp");
@@ -2245,22 +1663,144 @@ void HadTauEstimation_output_format(string elogForData="Elog404_",     // Data
   //
   QCDBin_HiDphi_nominal->Write();
   QCDBin_HiDphi_nominal_fullstatuncertainty->Write();
-  QCDBin_HiDphi_closureUncertainty->Write();
+  QCDBin_HiDphi_StatUncertainties->Write();
+  QCDBin_HiDphi_closureUncertainty->Add(QCDBin_one);       QCDBin_HiDphi_closureUncertainty->Write();
+  QCDBin_HiDphi_BMistagUp->Add(QCDBin_one);                QCDBin_HiDphi_BMistagUp->Write();
+  QCDBin_HiDphi_BMistagDn->Add(QCDBin_one);                QCDBin_HiDphi_BMistagDn->Write();
+  QCDBin_HiDphi_MuRecoSysUp->Add(QCDBin_one);              QCDBin_HiDphi_MuRecoSysUp->Write();
+  QCDBin_HiDphi_MuRecoSysDn->Add(QCDBin_one);              QCDBin_HiDphi_MuRecoSysDn->Write();
+  QCDBin_HiDphi_MuIsoSysUp->Add(QCDBin_one);               QCDBin_HiDphi_MuIsoSysUp->Write();
+  QCDBin_HiDphi_MuIsoSysDn->Add(QCDBin_one);               QCDBin_HiDphi_MuIsoSysDn->Write();
+  QCDBin_HiDphi_MuRecoIsoUp->Add(QCDBin_one);              QCDBin_HiDphi_MuRecoIsoUp->Write();
+  QCDBin_HiDphi_MuRecoIsoDn->Add(QCDBin_one);              QCDBin_HiDphi_MuRecoIsoDn->Write();
+  QCDBin_HiDphi_JECSysUp->Add(QCDBin_one);                 QCDBin_HiDphi_JECSysUp->Write("QCDBin_HiDphi_JECSysUp");
+  QCDBin_HiDphi_JECSysDn->Add(QCDBin_one);                 QCDBin_HiDphi_JECSysDn->Write("QCDBin_HiDphi_JECSysDn");
+  QCDBin_HiDphi_MTSysUp->Add(QCDBin_one);                  QCDBin_HiDphi_MTSysUp->Write("QCDBin_HiDphi_MTSysUp");
+  QCDBin_HiDphi_MTSysDn->Add(QCDBin_one);                  QCDBin_HiDphi_MTSysDn->Write("QCDBin_HiDphi_MTSysDn");
+  QCDBin_HiDphi_MtEffStat->Add(QCDBin_one);                QCDBin_HiDphi_MtEffStat->Write();  
+  QCDBin_HiDphi_IsoTrkVetoEffUncertaintyStat->Add(QCDBin_one); QCDBin_HiDphi_IsoTrkVetoEffUncertaintyStat->Write();
+  QCDBin_HiDphi_IsoTrkVetoEffUncertaintySys->Add(QCDBin_one);  QCDBin_HiDphi_IsoTrkVetoEffUncertaintySys->Write();
+  QCDBin_HiDphi_AccStat->Add(QCDBin_one);                  QCDBin_HiDphi_AccStat->Write();
+  QCDBin_HiDphi_MuFromTauStat->Add(QCDBin_one);            QCDBin_HiDphi_MuFromTauStat->Write();
+  QCDBin_HiDphi_DileptonUncertainty->Add(QCDBin_one);      QCDBin_HiDphi_DileptonUncertainty->Write();
 
   //
   QCDBin_LowDphi_nominal->Write();
   QCDBin_LowDphi_nominal_fullstatuncertainty->Write();
-  QCDBin_LowDphi_closureUncertainty->Write();
+  QCDBin_LowDphi_StatUncertainties->Write();
+  QCDBin_LowDphi_closureUncertainty->Add(QCDBin_one);      QCDBin_LowDphi_closureUncertainty->Write();
+  QCDBin_LowDphi_BMistagUp->Add(QCDBin_one);               QCDBin_LowDphi_BMistagUp->Write();
+  QCDBin_LowDphi_BMistagDn->Add(QCDBin_one);               QCDBin_LowDphi_BMistagDn->Write();
+  QCDBin_LowDphi_MuRecoSysUp->Add(QCDBin_one);             QCDBin_LowDphi_MuRecoSysUp->Write();
+  QCDBin_LowDphi_MuRecoSysDn->Add(QCDBin_one);             QCDBin_LowDphi_MuRecoSysDn->Write();
+  QCDBin_LowDphi_MuIsoSysUp->Add(QCDBin_one);              QCDBin_LowDphi_MuIsoSysUp->Write();
+  QCDBin_LowDphi_MuIsoSysDn->Add(QCDBin_one);              QCDBin_LowDphi_MuIsoSysDn->Write();
+  QCDBin_LowDphi_MuRecoIsoUp->Add(QCDBin_one);             QCDBin_LowDphi_MuRecoIsoUp->Write();
+  QCDBin_LowDphi_MuRecoIsoDn->Add(QCDBin_one);             QCDBin_LowDphi_MuRecoIsoDn->Write();
+  QCDBin_LowDphi_JECSysUp->Add(QCDBin_one);                QCDBin_LowDphi_JECSysUp->Write("QCDBin_LowDphi_JECSysUp");
+  QCDBin_LowDphi_JECSysDn->Add(QCDBin_one);                QCDBin_LowDphi_JECSysDn->Write("QCDBin_LowDphi_JECSysDn");
+  QCDBin_LowDphi_MTSysUp->Add(QCDBin_one);                 QCDBin_LowDphi_MTSysUp->Write("QCDBin_LowDphi_MTSysUp");
+  QCDBin_LowDphi_MTSysDn->Add(QCDBin_one);                 QCDBin_LowDphi_MTSysDn->Write("QCDBin_LowDphi_MTSysDn");
+  QCDBin_LowDphi_MtEffStat->Add(QCDBin_one);                QCDBin_LowDphi_MtEffStat->Write();  
+  QCDBin_LowDphi_IsoTrkVetoEffUncertaintyStat->Add(QCDBin_one); QCDBin_LowDphi_IsoTrkVetoEffUncertaintyStat->Write();
+  QCDBin_LowDphi_IsoTrkVetoEffUncertaintySys->Add(QCDBin_one);  QCDBin_LowDphi_IsoTrkVetoEffUncertaintySys->Write();
+  QCDBin_LowDphi_AccStat->Add(QCDBin_one);                  QCDBin_LowDphi_AccStat->Write();
+  QCDBin_LowDphi_MuFromTauStat->Add(QCDBin_one);            QCDBin_LowDphi_MuFromTauStat->Write();
+  QCDBin_LowDphi_DileptonUncertainty->Add(QCDBin_one);      QCDBin_LowDphi_DileptonUncertainty->Write();
 
   HadTauEstimation_OutputFile.Close();
 
 }
 
+// ----------
+void takeDiffForSys(TH1* sys, TH1* input_nominal){
+
+  TH1* input_sys = (TH1*)sys->Clone("input_sys");
+  sys->Reset();
+  sys->SetLineColor(1);
+  sys->SetFillColor(0);
+
+  Float_t diff;
+  for (int ibin=0;ibin<sys->GetNbinsX();ibin++){
+    if (input_nominal->GetBinContent(ibin+1)){
+      diff = float((input_sys->GetBinContent(ibin+1)-input_nominal->GetBinContent(ibin+1))
+		   /input_nominal->GetBinContent(ibin+1));
+      sys->SetBinContent(ibin+1,diff);
+    }
+  }
+  
+}
+
+// ----------
+void effMapStatErrPropagation(TH1* input, TH1* output){
+  
+  output->Reset();
+
+  for (int ibin=0;ibin<input->GetNbinsX();ibin++){
+    if (input->GetBinContent(ibin+1))
+      output->SetBinContent(ibin+1,input->GetBinError(ibin+1)/input->GetBinContent(ibin+1));
+  }
+  //output->Divide(input);  
+
+}
+
+// ----------
+void muFromTauStatErrPropagation(TH1* input, TH1* one, TH1* output){
+  
+  output->Reset();
+
+  for (int ibin=0;ibin<input->GetNbinsX();ibin++){
+    if (input->GetBinContent(ibin+1))
+      output->SetBinContent(ibin+1,input->GetBinError(ibin+1)/(1.-input->GetBinContent(ibin+1)));
+  }
+  //input->Add(one,-1.);    // (f-1.) ~ -0.7
+  //input->Scale(-1.);      // (1-f) ~ 0.7
+  //output->Divide(input);  // sigma(f)/(1-f)
+
+}
+
+void isoTrkVetoErrPropagation(TH1* input, double syserr, TH1* one,
+			      TH1* output_tot, TH1* output_stat, TH1* output_sys){
+
+  output_tot->Reset();
+  output_stat->Reset();
+  output_sys->Reset();
+
+  for (int ibin=0;ibin<output_sys->GetNbinsX();ibin++){
+    if (input->GetBinContent(ibin+1)){      
+      output_sys->SetBinContent(ibin+1,(1.-input->GetBinContent(ibin+1))*syserr/input->GetBinContent(ibin+1));
+      output_stat->SetBinContent(ibin+1,input->GetBinError(ibin+1)/input->GetBinContent(ibin+1));
+      double unc = pow(pow(output_sys->GetBinContent(ibin+1),2)
+		       + pow(output_stat->GetBinError(ibin+1),2),0.5);      
+      output_tot->SetBinContent(ibin+1,unc);      
+    }
+  }
+
+  /*
+  output_sys->Add(one,-1.);  // (eff-1.) ~ -0.4
+  output_sys->Scale(-1.);    // (1-eff) ~ 0.4
+  output_sys->Scale(syserr); // (1-eff)*0.1 ~ 0.04, i.e. 10% of the (1-eff)
+  for (int ibin=0;ibin<output_tot->GetNbinsX();ibin++){
+    double unc = pow(pow(output_sys->GetBinContent(ibin+1),2)
+		     + pow(input->GetBinError(ibin+1),2),0.5);
+    output_tot->SetBinContent(ibin+1,unc);
+    output_stat->SetBinContent(ibin+1,input->GetBinError(ibin+1));
+  }
+  output_sys->Divide(input);   // (1-eff)*0.1/eff
+  output_stat->Divide(input);  // sigma(eff)/eff
+  output_tot->Divide(input);   // 
+  */
+
+}
+
+// ----------
 void binMap(TH1* input, TH1* output){
   //
-  // Map from 11*3+6*2 binning to 72 binning
+  // Map from 11*3+6*2=45 binning to 72 binning
   //
-
+  // This involves two steps
+  // 1: 45 binning to 6*3=18 bins
+  // 2: 18 bins to 18*4=72 bins
 
   double noB[18]
     ={0.,0.,0.,0.,0.,0.,
@@ -2270,17 +1810,15 @@ void binMap(TH1* input, TH1* output){
     ={0.,0.,0.,0.,0.,0.,
       0.,0.,0.,0.,0.,0.,
       0.,0.,0.,0.,0.,0.};
-
   double noB_ent[18]
     ={6,6,6,6,3,6,
       1,1,1,1,1,1,
       1,1,1,1,1,1};
-
-  int map_input[45]
+  int map_input[45] // which 72/4=18 bins this 45 efficiency binning corresponds to?
     ={1,2,3,1,2,3,4,4,5,6,6,
       1,2,3,1,2,3,4,4,5,6,6,
       1,2,3,1,2,3,4,4,5,6,6,
-      7,8,9,10,11,12,
+       7, 8, 9,10,11,12,
       13,14,15,16,17,18};
 
   int map_output[72]
@@ -2297,9 +1835,61 @@ void binMap(TH1* input, TH1* output){
       13,14,15,16,17,18,
       13,14,15,16,17,18};
 
+  // 1: 45 binning to 6*3=18 bins
   for (int ibin=1; ibin<=input->GetNbinsX(); ibin++){    
     noB[map_input[ibin-1]-1] += input->GetBinContent(ibin)/noB_ent[map_input[ibin-1]-1];
     noBe[map_input[ibin-1]-1] += input->GetBinError(ibin)/noB_ent[map_input[ibin-1]-1];
+  }
+  
+  // 2: 18 bins to 18*4=72 bins
+  for (int ibin=1; ibin<=output->GetNbinsX(); ibin++){    
+    output->SetBinContent(ibin,noB[map_output[ibin-1]-1]);
+    output->SetBinError(ibin,noBe[map_output[ibin-1]-1]);
+  }
+
+};
+
+// ----------
+void binMap_QCD(TH1* input, TH1* output){
+  //
+  // Map from 11*3+6*2=45 binning to 44*5 binning
+  //
+
+  double noB[45]
+    ={0.,0.,0.,0.,0.,0.,
+      0.,0.,0.,0.,0.,0.,
+      0.,0.,0.,0.,0.,0.};
+  double noBe[45]
+    ={0.,0.,0.,0.,0.,0.,
+      0.,0.,0.,0.,0.,0.,
+      0.,0.,0.,0.,0.,0.};
+
+  int map_output[220]
+  ={1,2,3,4,5,6,7,8,9,10,11,
+    1,2,3,4,5,6,7,8,9,10,11,
+    1,2,3,4,5,6,7,8,9,10,11,
+    1,2,3,4,5,6,7,8,9,10,11,
+    12,13,14,15,16,17,18,19,20,21,22, // 12-22,
+    12,13,14,15,16,17,18,19,20,21,22, // 
+    12,13,14,15,16,17,18,19,20,21,22, // 
+    12,13,14,15,16,17,18,19,20,21,22, // 
+    23,24,25,26,27,28,29,30,31,32,33, // 23-33,
+    23,24,25,26,27,28,29,30,31,32,33, // 
+    23,24,25,26,27,28,29,30,31,32,33, // 
+    23,24,25,26,27,28,29,30,31,32,33, // 
+    34,35,36,34,35,36,37,37,38,39,39, // 34-39
+    34,35,36,34,35,36,37,37,38,39,39, //
+    34,35,36,34,35,36,37,37,38,39,39, //
+    34,35,36,34,35,36,37,37,38,39,39, //
+    40,41,42,40,41,42,43,43,44,45,45, // 40-45
+    40,41,42,40,41,42,43,43,44,45,45, //
+    40,41,42,40,41,42,43,43,44,45,45, //
+    40,41,42,40,41,42,43,43,44,45,45  //
+  };
+
+  for (int ibin=1; ibin<=input->GetNbinsX(); ibin++){    
+    noB[ibin-1]  = input->GetBinContent(ibin);
+    noBe[ibin-1] = input->GetBinError(ibin);
   }
 
   for (int ibin=1; ibin<=output->GetNbinsX(); ibin++){    

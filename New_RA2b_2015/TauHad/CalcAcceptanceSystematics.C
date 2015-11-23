@@ -45,8 +45,8 @@ void CalcAcceptanceSystematics(){
 
     hAcc_DeviationFromNomVec[iacc]->Multiply(hAcc_DeviationFromNomVec[iacc]); // (Acc - Acc_nom)^2
     if(iacc==0){
-     hSumofSquareOfDev = static_cast<TH1*>(hAccAll->Clone("hSumofSquareOfDev"));
-     hSumofSquareOfDev->Reset();
+      hSumofSquareOfDev = static_cast<TH1*>(hAccAll->Clone("hSumofSquareOfDev"));
+      hSumofSquareOfDev->Reset();
     }
 
     hSumofSquareOfDev->Add(hAcc_DeviationFromNomVec[iacc]); // sum{ (Acc - Acc_nom)^2 }
@@ -89,7 +89,7 @@ void CalcAcceptanceSystematics(){
   hAccSys->Write();
   hAccSys_lowDphi->Write();
 
-/*
+  /*
   for(int iacc=0; iacc < PDFsize ; iacc++){
     hAccAllVec[iacc]->Write();
     hAccPassVec[iacc]->Write();
@@ -99,16 +99,8 @@ void CalcAcceptanceSystematics(){
     hAcc_lowDphiVec[iacc]->Write();
 
   }
-*/
+  */
 
   outFile->Close();
-
-
-
-
-
-
-
-
 
 }
