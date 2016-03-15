@@ -90,6 +90,36 @@ namespace bootstrapUtils{
 
   }
 
+  //KH-Feb2016-starts
+  // Copy histogram contents for each event - 1D
+  void HistogramFillForEventCorrelation(TH2* h, TH1* h_evt){
+
+      for (int ibin=0;ibin<h_evt->GetNbinsX()+2;ibin++){
+
+        double binX     = h_evt->GetBinCenter(ibin);
+        double contentX = h_evt->GetBinContent(ibin);
+        if (contentX != 0.){
+          h->Fill(binX,binX,contentX); // diagonal entries
+        }
+
+	for (int jbin=0;jbin<ibin;jbin++){
+	  double binY     = h_evt->GetBinCenter(jbin);
+	  double contentY = h_evt->GetBinContent(jbin);	  
+	  double content = TMath::Min(contentX,contentY); // how this line works in MC events with negative weights
+	                                                  // is not clear yet. Needs to be revisited.
+	  if (contentX != 0. && contentY != 0.){
+	    h->Fill(binX,binY,contentY); // diagonal entries
+	    h->Fill(binY,binX,contentX); // diagonal entries
+	  }
+	}
+
+      }
+
+      //h_evt->Reset();
+
+  }
+  //KH-Feb2016-ends
+
   // Copy histogram contents for each event - 2D
   void HistogramFillForEventTH2(TH2* h, TH2* h_evt){
 

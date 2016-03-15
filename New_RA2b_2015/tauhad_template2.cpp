@@ -237,6 +237,48 @@ using namespace std;
     searchH_b_noWeight->Sumw2();
     TH1 * searchH_b_noWeight_evt = static_cast<TH1D*>(searchH_b_noWeight->Clone("searchH_b_noWeight_evt"));
 
+    //KH-Feb2016-starts
+    // Search binning - correlation
+    TH2* hSearchBinCorr = new TH2D("hSearchBinCorr","hSearchBinCorr",
+				   totNbins_b,0.5,totNbins_b+0.5,totNbins_b,0.5,totNbins_b+0.5);
+    hSearchBinCorr->Sumw2();  
+
+    // HT,MHT,njet,nb search binning
+    double SearchBinHT[4] = {500.,800.,1200.,1500.};
+    TH1* hSearchBinHT = new TH1D("hSearchBinHT","hSearchBinHT",3,SearchBinHT);
+    hSearchBinHT->Sumw2();  
+    TH1 * hSearchBinHT_evt = static_cast<TH1D*>(hSearchBinHT->Clone("hSearchBinHT_evt"));
+
+    double SearchBinMHT[4] = {200.,500.,750.,1200.};
+    TH1* hSearchBinMHT = new TH1D("hSearchBinMHT","hSearchBinMHT",3,SearchBinMHT);
+    hSearchBinMHT->Sumw2();  
+    TH1 * hSearchBinMHT_evt = static_cast<TH1D*>(hSearchBinMHT->Clone("hSearchBinMHT_evt"));
+
+    double SearchBinNjets[4] = {3.5,6.5,8.5,12.5};
+    TH1* hSearchBinNjets = new TH1D("hSearchBinNjets","hSearchBinNjets",3,SearchBinNjets);
+    hSearchBinNjets->Sumw2();  
+    TH1 * hSearchBinNjets_evt = static_cast<TH1D*>(hSearchBinNjets->Clone("hSearchBinNjets_evt"));
+
+    double SearchBinNb[5] = {-0.5,0.5,1.5,2.5,3.5};
+    TH1* hSearchBinNb = new TH1D("hSearchBinNb","hSearchBinNb",4,SearchBinNb);
+    hSearchBinNb->Sumw2();  
+    TH1 * hSearchBinNb_evt = static_cast<TH1D*>(hSearchBinNb->Clone("hSearchBinNb_evt"));
+
+    // HT,MHT,njet,nb search binning - correlation
+    TH2* hSearchBinCorrHT = new TH2D("hSearchBinCorrHT","hSearchBinCorrHT",3,SearchBinHT,3,SearchBinHT);
+    hSearchBinCorrHT->Sumw2();  
+
+    TH2* hSearchBinCorrMHT = new TH2D("hSearchBinCorrMHT","hSearchBinCorrMHT",3,SearchBinMHT,3,SearchBinMHT);
+    hSearchBinCorrMHT->Sumw2();  
+
+    TH2* hSearchBinCorrNjets = new TH2D("hSearchBinCorrNjets","hSearchBinCorrNjets",3,SearchBinNjets,3,SearchBinNjets);
+    hSearchBinCorrNjets->Sumw2();  
+
+    TH2* hSearchBinCorrNb = new TH2D("hSearchBinCorrNb","hSearchBinCorrNb",4,SearchBinNb,4,SearchBinNb);
+    hSearchBinCorrNb->Sumw2();  
+    //KH-Feb2016-ends
+
+    //     
 
     // vector of search and QCD histograms
     TH1D searchH_ = TH1D("searchH_","search bin histogram",totNbins,1,totNbins+1); 
@@ -1647,9 +1689,24 @@ using namespace std;
                     }
                   }
                   else{
-                      searchH_b_evt->Fill( binMap_b[utils2::findBin(newNJet,NewNB,newHT,newMHT).c_str()],searchWeight);
-                      // Fill QCD histograms
-                      QCD_Up_evt->Fill( binMap_QCD[utils2::findBin_QCD(newNJet,NewNB,newHT,newMHT).c_str()],searchWeight);
+
+		    searchH_b_evt->Fill( binMap_b[utils2::findBin(newNJet,NewNB,newHT,newMHT).c_str()],searchWeight);
+
+		    //KH-Feb2016-starts
+		    double newHT_tmp,newMHT_tmp,newNJet_tmp,NewNB_tmp;
+		    newHT_tmp=newHT; newMHT_tmp=newMHT; newNJet_tmp=newNJet; NewNB_tmp=NewNB;
+                    if (newHT_tmp>1500.) newHT_tmp=1499.;
+		    if (newMHT_tmp>1200.) newMHT_tmp=1199.;
+		    if (newNJet_tmp>=13) newNJet_tmp=12;
+		    if (NewNB_tmp>=4) NewNB_tmp=3.;
+		    hSearchBinHT_evt->Fill( newHT_tmp , searchWeight);
+		    hSearchBinMHT_evt->Fill( newMHT_tmp , searchWeight);
+		    hSearchBinNjets_evt->Fill( newNJet_tmp , searchWeight);
+		    hSearchBinNb_evt->Fill( NewNB_tmp , searchWeight);
+		    //KH-Feb2016-ends
+
+		    // Fill QCD histograms
+		    QCD_Up_evt->Fill( binMap_QCD[utils2::findBin_QCD(newNJet,NewNB,newHT,newMHT).c_str()],searchWeight);
                   }
                   if(NewNB==0)hPredHTMHT0b_evt->Fill( binMap_HTMHT[utils2::findBin_HTMHT(newHT,newMHT).c_str()],searchWeight);	
                   if(NewNB >0)hPredHTMHTwb_evt->Fill( binMap_HTMHT[utils2::findBin_HTMHT(newHT,newMHT).c_str()],searchWeight);
@@ -1927,6 +1984,16 @@ using namespace std;
           }
         }
 
+	//KH-Feb2016-starts - add histograms for correlation studies
+	//These lines have to come before HistogramFillForEventTH1,
+	//because HistogramFillForEventTH1 resets XXXX_evt histograms
+        bootstrapUtils::HistogramFillForEventCorrelation(hSearchBinCorr, searchH_b_evt);
+        bootstrapUtils::HistogramFillForEventCorrelation(hSearchBinCorrHT, hSearchBinHT_evt);
+        bootstrapUtils::HistogramFillForEventCorrelation(hSearchBinCorrMHT, hSearchBinMHT_evt);
+        bootstrapUtils::HistogramFillForEventCorrelation(hSearchBinCorrNjets, hSearchBinNjets_evt);
+        bootstrapUtils::HistogramFillForEventCorrelation(hSearchBinCorrNb, hSearchBinNb_evt);
+	//KH-Feb2016-ends
+
         // Correct the uncertainties
         bootstrapUtils::HistogramFillForEventTH1(searchH, searchH_evt);
         bootstrapUtils::HistogramFillForEventTH1(searchH_lowDphi, searchH_evt_lowDphi);
@@ -1938,8 +2005,14 @@ using namespace std;
         bootstrapUtils::HistogramFillForEventTH1(hPredNJetBins, hPredNJetBins_evt);
         bootstrapUtils::HistogramFillForEventTH1(hPredNbBins, hPredNbBins_evt);
 
-              
-        // for correlation studies
+	//KH-Feb2016-starts - add new histograms
+        bootstrapUtils::HistogramFillForEventTH1(hSearchBinHT, hSearchBinHT_evt);
+        bootstrapUtils::HistogramFillForEventTH1(hSearchBinMHT, hSearchBinMHT_evt);
+        bootstrapUtils::HistogramFillForEventTH1(hSearchBinNjets, hSearchBinNjets_evt);
+        bootstrapUtils::HistogramFillForEventTH1(hSearchBinNb, hSearchBinNb_evt);
+	//KH-Feb2016-ends
+
+	// for correlation studies
         bootstrapUtils::HistogramFillForEventTH2(hCorSearch_b, hCorSearch_b_noW, hCorSearch_b_evt, hCorSearch_b_noW_evt);
         bootstrapUtils::HistogramFillForEventTH2(hCorHT,    hCorHT_noW,    hCorHT_evt,    hCorHT_noW_evt);
         bootstrapUtils::HistogramFillForEventTH2(hCorMHT,   hCorMHT_noW,   hCorMHT_evt,   hCorMHT_noW_evt);
@@ -2160,6 +2233,19 @@ using namespace std;
     hMaxWeight_MHT2->Write();
     hMaxWeight_NJet->Write();
     hMaxWeight_NBtag->Write();
+
+    //KH-Feb2016-starts
+    hSearchBinHT->Write();
+    hSearchBinMHT->Write();
+    hSearchBinNjets->Write();
+    hSearchBinNb->Write();
+    hSearchBinCorr->Write();
+    hSearchBinCorrHT->Write();
+    hSearchBinCorrMHT->Write();
+    hSearchBinCorrNjets->Write();
+    hSearchBinCorrNb->Write();
+    //KH-Feb2016-ends
+
     TDirectory *cdtoitt;
     TDirectory *cdtoit;
     // Loop over different event categories (e.g. "All events, Wlnu, Zll, Zvv, etc")
