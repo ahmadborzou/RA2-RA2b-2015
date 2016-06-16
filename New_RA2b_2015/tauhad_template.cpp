@@ -239,7 +239,7 @@ using namespace std;
     hAccAll_lowDphi->Sumw2();
     hAccPass_lowDphi->Sumw2();
 
-    // calculate iso efficiencies
+    // calculate isotrack veto efficiencies
     TH1* IsoElec_all = new TH1D("IsoElec_all","Isolated electron efficiency -- all ",totNbins,1,totNbins+1);
     IsoElec_all->Sumw2();
     TH1* IsoElec_pass = new TH1D("IsoElec_pass","Isolated electron efficiency -- pass ",totNbins,1,totNbins+1);
@@ -260,7 +260,6 @@ using namespace std;
     TH1* Iso_pass = new TH1D("Iso_pass","Isolated Trk efficiency -- pass ",totNbins_ForAcc,1,totNbins_ForAcc+1);
     Iso_pass->Sumw2();
 
-
     TH1* Iso_all_lowDphi = new TH1D("Iso_all_lowDphi","Isolated Trk efficiency -- all ",totNbins_ForAcc,1,totNbins_ForAcc+1);
     Iso_all_lowDphi->Sumw2();
     TH1* Iso_pass_lowDphi = new TH1D("Iso_pass_lowDphi","Isolated Trk efficiency -- pass ",totNbins_ForAcc,1,totNbins_ForAcc+1);
@@ -270,9 +269,38 @@ using namespace std;
     Iso_all2->Sumw2();
     TH1* Iso_pass2 = new TH1D("Iso_pass2","Isolated Trk efficiency for leading tau jet -- pass ",totNbins,1,totNbins+1);
     Iso_pass2->Sumw2();
-    
 
-    
+    // isotrack veto efficiency nb dependence
+    TH1* Iso_all_nb = new TH1D("Iso_all_nb","Isolated Trk efficiency -- all nb",4,-0.5,3.5);
+    Iso_all_nb->Sumw2();
+    TH1* Iso_pass_nb = new TH1D("Iso_pass_nb","Isolated Trk efficiency -- pass nb",4,-0.5,3.5);
+    Iso_pass_nb->Sumw2();
+
+    TH1* Iso_all_nb_lowDphi = new TH1D("Iso_all_nb_lowDphi","Isolated Trk efficiency -- all nb_lowDphi",4,-0.5,3.5);
+    Iso_all_nb_lowDphi->Sumw2();
+    TH1* Iso_pass_nb_lowDphi = new TH1D("Iso_pass_nb_lowDphi","Isolated Trk efficiency -- pass nb_lowDphi",4,-0.5,3.5);
+    Iso_pass_nb_lowDphi->Sumw2();
+
+    TH1* Iso_all_nb_njet34 = new TH1D("Iso_all_nb_njet34","Isolated Trk efficiency -- all nb_njet34",4,-0.5,3.5);
+    Iso_all_nb_njet34->Sumw2();
+    TH1* Iso_pass_nb_njet34 = new TH1D("Iso_pass_nb_njet34","Isolated Trk efficiency -- pass nb_njet34",4,-0.5,3.5);
+    Iso_pass_nb_njet34->Sumw2();
+
+    TH1* Iso_all_nb_njet56 = new TH1D("Iso_all_nb_njet56","Isolated Trk efficiency -- all nb_njet56",4,-0.5,3.5);
+    Iso_all_nb_njet56->Sumw2();
+    TH1* Iso_pass_nb_njet56 = new TH1D("Iso_pass_nb_njet56","Isolated Trk efficiency -- pass nb_njet56",4,-0.5,3.5);
+    Iso_pass_nb_njet56->Sumw2();
+
+    TH1* Iso_all_nb_njet78 = new TH1D("Iso_all_nb_njet78","Isolated Trk efficiency -- all nb_njet78",4,-0.5,3.5);
+    Iso_all_nb_njet78->Sumw2();
+    TH1* Iso_pass_nb_njet78 = new TH1D("Iso_pass_nb_njet78","Isolated Trk efficiency -- pass nb_njet78",4,-0.5,3.5);
+    Iso_pass_nb_njet78->Sumw2();
+
+    TH1* Iso_all_nb_njet9 = new TH1D("Iso_all_nb_njet9","Isolated Trk efficiency -- all nb_njet9",4,-0.5,3.5);
+    Iso_all_nb_njet9->Sumw2();
+    TH1* Iso_pass_nb_njet9 = new TH1D("Iso_pass_nb_njet9","Isolated Trk efficiency -- pass nb_njet9",4,-0.5,3.5);
+    Iso_pass_nb_njet9->Sumw2();
+        
     // They are filled for different bins in generated tau-lepton pt.
     std::vector<TH1*> hTauResp(utils->TauResponse_nBins_());
     std::vector<TH1*> hTauRespUp(utils->TauResponse_nBins_());
@@ -456,8 +484,6 @@ using namespace std;
       //eventWeight = evt->weight()/evt->puweight();
       //if(subSampleKey.find("TTbar_Tbar_SingleLep")!=string::npos)eventWeight = 2.984e-06;
       //if(subSampleKey.find("TTbar_DiLept")!=string::npos)eventWeight = 2.84141e-06;
-
-
 
       cutflow_preselection->Fill(0.,eventWeight); // keep track of all events processed
 
@@ -768,10 +794,16 @@ using namespace std;
         if(sel->nolep(evt->nLeptons())&&sel->Njet_4(evt->nJets())&&sel->ht_500(evt->ht())
            &&sel->mht_200(evt->mht())&&sel->low_dphi(evt->nJets(),evt->deltaPhi1(),evt->deltaPhi2(),evt->deltaPhi3(),evt->deltaPhi4())
           ){
-          Iso_all_lowDphi->Fill( binMap_ForAcc[utils2::findBin_ForAcc(evt->nJets(),evt->ht(),evt->mht()).c_str()],eventWeight); // the weight has only scaling info.
-          if(evt->nIsoPion()==0&&evt->nIsoMu()==0&&evt->nIsoElec()==0)Iso_pass_lowDphi->Fill( binMap_ForAcc[utils2::findBin_ForAcc(evt->nJets(),evt->ht(),evt->mht()).c_str()],eventWeight);
-        }
 
+          Iso_all_lowDphi->Fill( binMap_ForAcc[utils2::findBin_ForAcc(evt->nJets(),evt->ht(),evt->mht()).c_str()],eventWeight); // the weight has only scaling info.
+          Iso_all_nb_lowDphi->Fill( evt->nBtagBin(),eventWeight );
+
+          if(evt->nIsoPion()==0&&evt->nIsoMu()==0&&evt->nIsoElec()==0){
+	    Iso_pass_lowDphi->Fill( binMap_ForAcc[utils2::findBin_ForAcc(evt->nJets(),evt->ht(),evt->mht()).c_str()],eventWeight);
+	    Iso_pass_nb_lowDphi->Fill( evt->nBtagBin(),eventWeight );
+	  }
+
+        }
 
         // Apply baseline cuts
         if(sel->nolep(evt->nLeptons())&&sel->Njet_4(evt->nJets())&&sel->ht_500(evt->ht())
@@ -788,9 +820,22 @@ using namespace std;
           if(evt->nIsoMu()==0)IsoMu_pass->Fill( binMap[utils2::findBin_NoB(evt->nJets(),evt->ht(),evt->mht()).c_str()],eventWeight);
           IsoPion_all->Fill( binMap[utils2::findBin_NoB(evt->nJets(),evt->ht(),evt->mht()).c_str()],eventWeight);
           if(evt->nIsoPion()==0)IsoPion_pass->Fill( binMap[utils2::findBin_NoB(evt->nJets(),evt->ht(),evt->mht()).c_str()],eventWeight);
+
           Iso_all->Fill( binMap_ForAcc[utils2::findBin_ForAcc(evt->nJets(),evt->ht(),evt->mht()).c_str()],eventWeight);
-          if(evt->nIsoPion()==0&&evt->nIsoMu()==0&&evt->nIsoElec()==0)Iso_pass->Fill( binMap_ForAcc[utils2::findBin_ForAcc(evt->nJets(),evt->ht(),evt->mht()).c_str()],eventWeight);
-          
+          Iso_all_nb->Fill( evt->nBtagBin(),eventWeight );
+          if (evt->nJets()>=3 && evt->nJets()<=4) Iso_all_nb_njet34->Fill( evt->nBtagBin(),eventWeight );
+          if (evt->nJets()>=5 && evt->nJets()<=6) Iso_all_nb_njet56->Fill( evt->nBtagBin(),eventWeight );
+          if (evt->nJets()>=7 && evt->nJets()<=8) Iso_all_nb_njet78->Fill( evt->nBtagBin(),eventWeight );
+          if (evt->nJets()>=9                   ) Iso_all_nb_njet9->Fill(  evt->nBtagBin(),eventWeight );
+          if(evt->nIsoPion()==0&&evt->nIsoMu()==0&&evt->nIsoElec()==0){
+	    Iso_pass->Fill( binMap_ForAcc[utils2::findBin_ForAcc(evt->nJets(),evt->ht(),evt->mht()).c_str()],eventWeight);
+	    Iso_pass_nb->Fill( evt->nBtagBin(),eventWeight );
+	    if (evt->nJets()>=3 && evt->nJets()<=4) Iso_pass_nb_njet34->Fill( evt->nBtagBin(),eventWeight );
+	    if (evt->nJets()>=5 && evt->nJets()<=6) Iso_pass_nb_njet56->Fill( evt->nBtagBin(),eventWeight );
+	    if (evt->nJets()>=7 && evt->nJets()<=8) Iso_pass_nb_njet78->Fill( evt->nBtagBin(),eventWeight );
+	    if (evt->nJets()>=9                   ) Iso_pass_nb_njet9->Fill(  evt->nBtagBin(),eventWeight );
+	  }          
+
           // we are also interested to see how often the leading tau jet is vetoed by IsoTrk
           Iso_all2->Fill( binMap[utils2::findBin_NoB(evt->nJets(),evt->ht(),evt->mht()).c_str()],eventWeight);
           int IsoElecIdx=-1, IsoMuIdx=-1, IsoPionIdx=-1;
@@ -802,18 +847,14 @@ using namespace std;
           // 
           int JetIndex=-1;
           utils->findMatchedObject(JetIndex,Visible3Vec.Eta(),Visible3Vec.Phi(), evt->slimJetPtVec_(), evt->slimJetEtaVec_(), evt->slimJetPhiVec_(),0.4,verbose);
-//printf("IsoElecIdx: %d \n ",IsoElecIdx);
+	  //printf("IsoElecIdx: %d \n ",IsoElecIdx);
           if(JetIndex!=-1)utils->findMatchedObject(IsoElecIdx,evt->slimJetEtaVec_()[JetIndex],evt->slimJetPhiVec_()[JetIndex],evt->IsoElecPtVec_(),evt->IsoElecEtaVec_(),evt->IsoElecPhiVec_(),0.4,verbose);
-//printf("IsoElecIdx: %d \n ",IsoElecIdx);
-
+	  //printf("IsoElecIdx: %d \n ",IsoElecIdx);
 
           utils->findMatchedObject(IsoMuIdx,Visible3Vec.Eta(),Visible3Vec.Phi(),evt->IsoMuPtVec_(),evt->IsoMuEtaVec_(),evt->IsoMuPhiVec_(),0.4,verbose);
           utils->findMatchedObject(IsoPionIdx,Visible3Vec.Eta(),Visible3Vec.Phi(),evt->IsoPionPtVec_(),evt->IsoPionEtaVec_(),evt->IsoPionPhiVec_(),0.4,verbose);
           if( IsoElecIdx==-1 && IsoMuIdx==-1 && IsoPionIdx==-1)
             Iso_pass2->Fill( binMap[utils2::findBin_NoB(evt->nJets(),evt->ht(),evt->mht()).c_str()],eventWeight); 
-
-
- 
 
           if(passIso){
               // Fill Search bin histogram
@@ -1040,7 +1081,7 @@ using namespace std;
     trig_pass->Write();
     trigFile.Close();
 
-    // Compute iso efficiencies
+    // Compute isotrack veto efficiencies
     TH1* IsoElecEff = static_cast<TH1*>(IsoElec_pass->Clone("IsoElecEff"));
     IsoElecEff->Divide(IsoElec_pass,IsoElec_all,1,1,"B");
     TH1* IsoMuEff = static_cast<TH1*>(IsoMu_pass->Clone("IsoMuEff"));
@@ -1054,7 +1095,26 @@ using namespace std;
     TH1* IsoEff2 = static_cast<TH1*>(Iso_pass2->Clone("IsoEff2"));
     IsoEff2->Divide(Iso_pass2,Iso_all2,1,1,"B");   
 
-
+    // isotrack veto efficiencies - nb dependence 
+    // rescaled to center around unity because they will be applied on top of already applied isotrk veto efficiency
+    TH1* IsoNbEff = static_cast<TH1*>(Iso_pass_nb->Clone("IsoNbEff"));
+    IsoNbEff->Divide(Iso_pass_nb,Iso_all_nb,1,1,"B");
+    if (Iso_pass_nb->GetSumOfWeights()>0.) IsoNbEff->Scale(Iso_all_nb->GetSumOfWeights()/Iso_pass_nb->GetSumOfWeights()); 
+    TH1* IsoNbEff_lowDphi = static_cast<TH1*>(Iso_pass_nb_lowDphi->Clone("IsoNbEff_lowDphi"));
+    IsoNbEff_lowDphi->Divide(Iso_pass_nb_lowDphi,Iso_all_nb_lowDphi,1,1,"B");
+    if (Iso_pass_nb_lowDphi->GetSumOfWeights()>0.) IsoNbEff_lowDphi->Scale(Iso_all_nb_lowDphi->GetSumOfWeights()/Iso_pass_nb_lowDphi->GetSumOfWeights());
+    TH1* IsoNbNjet34Eff = static_cast<TH1*>(Iso_pass_nb_njet34->Clone("IsoNbNjet34Eff"));
+    IsoNbNjet34Eff->Divide(Iso_pass_nb_njet34,Iso_all_nb_njet34,1,1,"B");
+    if (Iso_pass_nb_njet34->GetSumOfWeights()>0.) IsoNbNjet34Eff->Scale(Iso_all_nb_njet34->GetSumOfWeights()/Iso_pass_nb_njet34->GetSumOfWeights());
+    TH1* IsoNbNjet56Eff = static_cast<TH1*>(Iso_pass_nb_njet56->Clone("IsoNbNjet56Eff"));
+    IsoNbNjet56Eff->Divide(Iso_pass_nb_njet56,Iso_all_nb_njet56,1,1,"B");
+    if (Iso_pass_nb_njet56->GetSumOfWeights()>0.) IsoNbNjet56Eff->Scale(Iso_all_nb_njet56->GetSumOfWeights()/Iso_pass_nb_njet56->GetSumOfWeights());
+    TH1* IsoNbNjet78Eff = static_cast<TH1*>(Iso_pass_nb_njet78->Clone("IsoNbNjet78Eff"));
+    IsoNbNjet78Eff->Divide(Iso_pass_nb_njet78,Iso_all_nb_njet78,1,1,"B");
+    if (Iso_pass_nb_njet78->GetSumOfWeights()>0.) IsoNbNjet78Eff->Scale(Iso_all_nb_njet78->GetSumOfWeights()/Iso_pass_nb_njet78->GetSumOfWeights());
+    TH1* IsoNbNjet9Eff = static_cast<TH1*>(Iso_pass_nb_njet9->Clone("IsoNbNjet9Eff"));
+    IsoNbNjet9Eff->Divide(Iso_pass_nb_njet9,Iso_all_nb_njet9,1,1,"B");
+    if (Iso_pass_nb_njet9->GetSumOfWeights()>0.) IsoNbNjet9Eff->Scale(Iso_all_nb_njet9->GetSumOfWeights()/Iso_pass_nb_njet9->GetSumOfWeights());
  
     sprintf(tempname,"%s/IsoEfficiencies_%s_%s.root",Outdir.c_str(),subSampleKey.c_str(),inputnumber.c_str());
     TFile outFile3(tempname,"RECREATE");
@@ -1076,8 +1136,24 @@ using namespace std;
     IsoEff2->Write();
     Iso_pass2->Write();
     Iso_all2->Write();
-    
-
+    IsoNbEff->Write();
+    Iso_pass_nb->Write();
+    Iso_all_nb->Write();
+    IsoNbEff_lowDphi->Write();
+    Iso_pass_nb_lowDphi->Write();
+    Iso_all_nb_lowDphi->Write();
+    IsoNbNjet34Eff->Write();
+    Iso_pass_nb_njet34->Write();
+    Iso_all_nb_njet34->Write();
+    IsoNbNjet56Eff->Write();
+    Iso_pass_nb_njet56->Write();
+    Iso_all_nb_njet56->Write();
+    IsoNbNjet78Eff->Write();
+    Iso_pass_nb_njet78->Write();
+    Iso_all_nb_njet78->Write();
+    IsoNbNjet9Eff->Write();    
+    Iso_pass_nb_njet9->Write();
+    Iso_all_nb_njet9->Write();
     outFile3.Close();
 
     // Compute acceptance

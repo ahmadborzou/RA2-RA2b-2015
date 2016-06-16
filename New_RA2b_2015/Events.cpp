@@ -298,6 +298,13 @@
   // Number of B jets
   int Events::nBtags() const { return BTags; }
 
+  // Btag bins [0,1,2,>=3]
+  int Events::nBtagBin() const {
+    int nbtagbin = BTags;
+    if (nbtagbin>=4) nbtagbin=3;
+    return nbtagbin; 
+  }
+
   // Number of Leptons
   int Events::nLeptons() const {
     int tempN;
