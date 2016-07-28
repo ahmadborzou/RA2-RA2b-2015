@@ -7,6 +7,7 @@ This is now the main directory for the anlaysis.
 
 ./run_tauHad2 "InputFiles_TTbar/filelist_Spring15_TTJets_T_SingleLep_00" "TTJets_T_SingleLep" "." "" "0" 
 ./run_tauHad2 "InputFiles_Data/filelist_data_SingleMuon_v16b_00"         "Data"               "." "" "0" 
+./run_tauHad2 "InputFiles_Signal/RA2bin_T1tttt_900_1_fast" "RA2bin_T1tttt_900_1_fast"  "." "" "0"
 
 ----- Submit jobs to pbs -----
 

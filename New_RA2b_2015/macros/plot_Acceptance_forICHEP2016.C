@@ -78,7 +78,6 @@ void plot_Acceptance_forICHEP2016(std::string elogForPlot=""){
     }
 
 
-  
     thist = (TH1D*)file->Get(tempname)->Clone();
     histNum = (TH1D*)file->Get(tempNum)->Clone();
     histDen = (TH1D*)file->Get(tempDen)->Clone();
@@ -118,19 +117,21 @@ void plot_Acceptance_forICHEP2016(std::string elogForPlot=""){
 	double newN=0;
 	double newD=0;
 	//std::cout<<"Bin "<< j<< "thist_j"<<ratio<<endl;
-	if(j==70){
-	  newN=histNum->GetBinContent(j)+histNum->GetBinContent(j+1);
-	  newD=histDen->GetBinContent(j)+histDen->GetBinContent(j+1);      
+	if(j==52 || j==55 || j==61 || j==64 || j==67 || j==70 || j==72){
+	  int kbin=j+1;
+	  if(j==72) kbin=j-1;
+	  newN=histNum->GetBinContent(j)+histNum->GetBinContent(kbin);
+	  newD=histDen->GetBinContent(j)+histDen->GetBinContent(kbin);      
 	  ratio=newN/newD;
 	  binvalue=ratio;
       
 	  double accOld = thist->GetBinContent(j);
 	  double errOld = thist->GetBinError(j);
 	  thist->SetBinContent(j,ratio);
-	  thist->SetBinError(j,  thist->GetBinError(j+1) );
+	  thist->SetBinError(j,  thist->GetBinError(kbin) );
 
 	  if(binvalue!=0)
-	    std::cout<<" Bin "<< j<< " Numerator(j) "<< histNum->GetBinContent(j) <<" Numerator(j+1) "<<histNum->GetBinContent(j+1) <<" newNumerator "<<newN<<" Denominator(j) "<<histDen->GetBinContent(j)<<" Denominator(j+1) "<< histDen->GetBinContent(j+1)<<" newDenominator "<<newD<< " oldAcc(j) " << accOld << " newAcc(j) " << ratio << " oldErr(j) " << errOld << " err(j+1) " <<  thist->GetBinError(j+1) << " newErr(j) " << thist->GetBinError(j) << endl;
+	    std::cout<<" Bin "<< j<< " Numerator("<<j<<") "<< histNum->GetBinContent(j) <<" Numerator("<<kbin<<") "<<histNum->GetBinContent(kbin) <<" newNumerator "<<newN<<" Denominator("<<j<<") "<<histDen->GetBinContent(j)<<" Denominator("<<kbin<<") "<< histDen->GetBinContent(kbin)<<" newDenominator "<<newD<< " oldAcc("<<j<<") " << accOld << " newAcc("<<j<<") " << ratio << " oldErr("<<j<<") " << errOld << " err("<<kbin<<") " <<  thist->GetBinError(kbin) << " newErr("<<j<<") " << thist->GetBinError(j) << endl;
 
 	}
       }

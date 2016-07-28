@@ -14,7 +14,6 @@ namespace utils2{
   //    and talked about above as weight.
   int IsoTrkModel=0;
 
-
   // Determine which model to work with
   // 0: The most simple model
   // 1: 0 but muon's mother ( W or tau ) is determined using hists not generator info.
@@ -38,8 +37,11 @@ namespace utils2{
   bool applyTrig = false;
 
   bool applyIsoTrk =true; // default true
-//###############################################################################################################
 
+  bool genHTMHT=false; // default false
+  //###############################################################################################################
+
+  bool addSys=true;
   // get the total # of events for normalization purposes
   int TotNEve(string subSampleKey){
     int NEve=-1;
@@ -464,6 +466,142 @@ namespace utils2{
     int NjetNbtagBin = 4*njet+nbtag;
     
     return NjetNbtagBin; 
+  }
+
+  int nMHT=5;
+  double GetTriggerEffCorr(bool signal, double MHT, int statUnc=0, int systUnc=0){
+    double w = 1;
+    if(signal) {
+      double central[nMHT] = {0.982, 0.985, 0.995, 1.00, 1.00};
+      double stat_up[nMHT] = {0.004, 0.006, 0.003, 0.00, 0.00};
+      double stat_dn[nMHT] = {0.005, 0.009, 0.007, 0.02, 0.02};
+      double syst_up[nMHT] = {0.02, 0.02, 0.02, 0.02, 0.02}; 
+      double syst_dn[nMHT] = {0.02, 0.02, 0.02, 0.02, 0.02}; 
+
+      //bin lower edges
+      double MHTbins[nMHT+1] = {250,300,350,500,750,9999};
+		  
+      int bin = -1;
+      for(int b = 0; b < nMHT; ++b){
+	if(MHT > MHTbins[b] && MHT <= MHTbins[b+1]){
+	  bin = b;
+	  break;
+	}
+      }
+		  
+      if(bin==-1) return 0.;
+		  
+      w = central[bin];
+		  
+      if(statUnc==1) w += stat_up[bin];
+      else if(statUnc==-1) w -= stat_dn[bin];
+		  
+      if(systUnc==1) w += syst_up[bin];
+      else if(systUnc==-1) w -= syst_dn[bin];
+    }
+    else {
+      w = 1;
+      //new SM/fakeMET effs not implemented yet
+    }
+		
+    return w;
+  }
+
+  static std::pair<double,double> EvalSF(TH1 *hist, Double_t xVal) {
+    // Dont use overflow bins!
+    if(xVal < hist->GetXaxis()->GetXmin() )
+      {
+	//std::cout<<"SF: Warning xVal: "<<xVal<<" is smaller than minimum of histo: "<<hist->GetName()<<std::endl;
+	xVal= hist->GetXaxis()->GetXmin()+0.01;
+      }
+    else if(xVal > hist->GetXaxis()->GetXmax() )
+      {
+	//std::cout<<"SF: Warning xVal: "<<xVal<<" is bigger than maximum of histo: "<<hist->GetName()<<" which is: "<<hist->GetXaxis()->GetXmax()<<std::endl;
+	xVal= hist->GetXaxis()->GetXmax()-0.01;
+      }
+  
+    int nxBin = hist->GetXaxis()->FindBin(xVal);
+
+    if(nxBin > hist->GetNbinsX()) std::cout<<"SF: Problem in getting Efficiencies!"<<std::endl;
+    if(nxBin > hist->GetNbinsX()) nxBin = hist->GetNbinsX();
+
+    return std::make_pair(hist->GetBinContent(nxBin), hist->GetBinError(nxBin));
+  }
+
+
+
+  static std::pair<double,double> EvalSF(TH2 *hist, Double_t xVal, Double_t yVal) {
+    // Dont use overflow bins!
+    if(xVal < hist->GetXaxis()->GetXmin() )
+      {
+	//std::cout<<"SF: Warning xVal: "<<xVal<<" is smaller than minimum of histo: "<<hist->GetName()<<std::endl;
+	xVal= hist->GetXaxis()->GetXmin()+0.01;
+      }
+    else if(xVal > hist->GetXaxis()->GetXmax() )
+      {
+	//std::cout<<"SF: Warning xVal: "<<xVal<<" is bigger than maximum of histo: "<<hist->GetName()<<" which is: "<<hist->GetXaxis()->GetXmax()<<std::endl;
+	xVal= hist->GetXaxis()->GetXmax()-0.01;
+      }
+  
+    if(yVal < hist->GetYaxis()->GetXmin() )
+      {
+	//std::cout<<"SF: Warning yVal: "<<yVal<<" is smaller than minimum of histo: "<<hist->GetName()<<std::endl;
+	yVal= hist->GetYaxis()->GetXmin()+0.01;
+      }
+    else if(yVal > hist->GetYaxis()->GetXmax() )
+      {
+	//std::cout<<"SF: Warning yVal: "<<yVal<<" is bigger than maximum of histo: "<<hist->GetName()<<std::endl;
+	yVal= hist->GetYaxis()->GetXmax()-0.01;
+      }
+
+    int nxBin = hist->GetXaxis()->FindBin(xVal);
+    int nyBin = hist->GetYaxis()->FindBin(yVal);
+
+    if(nxBin > hist->GetNbinsX() || nyBin > hist->GetNbinsY()) std::cout<<"SF: Problem in getting Efficiencies!"<<std::endl;
+    if(nxBin > hist->GetNbinsX()) nxBin = hist->GetNbinsX();
+    if(nyBin > hist->GetNbinsY()) nyBin = hist->GetNbinsY();
+
+    return std::make_pair(hist->GetBinContent(nxBin, nyBin), hist->GetBinError(nxBin, nyBin));
+  }
+
+  static double GetSF(TH1 *hist, Double_t xVal) {
+    return EvalSF(hist, xVal).first;
+  }
+
+
+  static double GetSF(TH2 *hist, Double_t xVal, Double_t yVal) {
+    return EvalSF(hist, xVal, yVal).first;
+  }
+
+
+  static double GetSFUnc(TH1 *hist, Double_t xVal, bool addSys) {
+    // addSys: for muons, 1% systematic has to be added to total uncertainty
+
+    std::pair<double, double> SFandUnc = EvalSF(hist, xVal);
+
+    double SF = 0.;
+
+    if(addSys) SF = std::max(std::abs(1-SFandUnc.first), std::sqrt(SFandUnc.second*SFandUnc.second + 0.01*SFandUnc.first*0.01*SFandUnc.first));
+    else SF = std::max(std::abs(1-SFandUnc.first), SFandUnc.second);
+
+    return SF;
+  }
+
+
+
+  static double GetSFUnc(TH2 *hist, Double_t xVal, Double_t yVal, bool addSys) {
+    // addSys: for muons, 1% systematic has to be added to total uncertainty
+
+    std::pair<double, double> SFandUnc = EvalSF(hist, xVal, yVal);
+
+    double SF = 0.;
+
+    if(addSys) SF = std::max(std::abs(1-SFandUnc.first), std::sqrt(SFandUnc.second*SFandUnc.second + 0.01*SFandUnc.first*0.01*SFandUnc.first));
+    else SF = std::max(std::abs(1-SFandUnc.first), SFandUnc.second);
+
+    //std::cout << std::abs(1-hist->GetBinContent(nxBin, nyBin)) << " " << std::sqrt(hist->GetBinError(nxBin, nyBin)*hist->GetBinError(nxBin, nyBin) + 0.01*hist->GetBinContent(nxBin, nyBin)*0.01*hist->GetBinContent(nxBin, nyBin)) << " " << hist->GetBinError(nxBin, nyBin)<<std::endl;
+
+    return SF;
   }
 
 

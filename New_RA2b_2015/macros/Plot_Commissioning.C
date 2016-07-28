@@ -102,12 +102,14 @@ Plot_Commissioning(string histname="NJet", string cutname="delphi",
   char xtitlename[200];
   char ytitlename[200];
 
-  sprintf(tempname,"TauHad2/HadTauEstimation_data_%s_v17a_.root",PDname.c_str()); 
+  //  sprintf(tempname,"TauHad2/HadTauEstimation_data_%s_v17a_.root",PDname.c_str()); 
   //  sprintf(tempname,"TauHad2/HadTauEstimation_data_%s_v16b_.root",PDname.c_str());
+  //  sprintf(tempname,"TauHad2/ARElog49_7.6ifb_HadTauEstimation_data_%s_V9bc_.root",PDname.c_str()); 
+  sprintf(tempname,"TauHad2/ARElog56_12.9ifb_HadTauEstimation_data_%s_V9bcd_.root",PDname.c_str());
   TFile * PreData = new TFile(tempname,"R");
-  TFile * ExpTT = new TFile("TauHad/Stack/GenInfo_HadTauEstimation_TTbar_stacked.root","R");
-  TFile * ExpWJ = new TFile("TauHad/Stack/GenInfo_HadTauEstimation_WJet_stacked.root","R");
-  TFile * ExpT  = new TFile("TauHad/Stack/GenInfo_HadTauEstimation_T_stacked.root","R");
+  TFile * ExpTT = new TFile("TauHad/Stack/ARElog47_GenInfo_HadTauEstimation_TTbar_stacked.root","R");
+  TFile * ExpWJ = new TFile("TauHad/Stack/ARElog47_GenInfo_HadTauEstimation_WJet_stacked.root","R");
+  TFile * ExpT  = new TFile("TauHad/Stack/ARElog47_GenInfo_HadTauEstimation_T_stacked.root","R");
   TFile * ExpRare;
   if (!skipRare) ExpRare = new TFile("TauHad/GenInfo_HadTauEstimation_Rare_Elog410.root","R");
   //
@@ -357,7 +359,7 @@ Plot_Commissioning(string histname="NJet", string cutname="delphi",
   if(histname=="HT"){
     xtext_top = 2200.;
     //y_legend  = 2000.;
-    ymax_top = 3000.;
+    ymax_top = 8000.;
     ymin_top = 0.15;
     xmax = 2500.;
     //if (cutname=="delphi") xmax = 1500.;
@@ -383,7 +385,7 @@ Plot_Commissioning(string histname="NJet", string cutname="delphi",
   if(histname=="NBtag"){
     xtext_top = 1800.;
     //y_legend  = 2000.;
-    ymax_top = 10000.;
+    ymax_top = 100000.;
     ymin_top = 0.15;
     xmax = 5.;
     xmin = 0;
@@ -395,7 +397,7 @@ Plot_Commissioning(string histname="NJet", string cutname="delphi",
   if(histname=="NJet"){
     xtext_top = 1800.;
     //y_legend  = 2000.;
-    ymax_top = 10000.;
+    ymax_top = 100000.;
     ymin_top = 0.15;
     xmax = 12.;
     xmin = 2;

@@ -2,6 +2,7 @@
 
 echo $PBS_O_WORKDIR
 cd $PBS_O_WORKDIR
+hostname
 source ~cmssoft/shrc
 eval `scramv1 runtime -sh`
 #

@@ -18,6 +18,7 @@ void WrapUpSignalContamination(string type="T1bbbb"){
 
   // open a file to write the output 
   sprintf(tempname,"TauHad2/%s_SignalFiles.root",type.c_str());
+  std::cout<<" Output file name "<< tempname <<endl;
   TFile * outfile = new TFile(tempname,"RECREATE");
   TDirectory * tdirSearch = outfile->mkdir("SearchH_b");
   TDirectory * tdirQCD_Up = outfile->mkdir("QCD_Up");
@@ -47,9 +48,14 @@ void WrapUpSignalContamination(string type="T1bbbb"){
 
   ///read the file names from the .txt files and load them to a vector.
   while(fin.getline(filenames, 500) ){filesVec.push_back(filenames);}
+  std::cout<<" filesVec_size "<<filesVec.size()<<endl;
+  //HadTauEstimation_RA2bin_T1tttt_1950_600_fast-_00.root
   for(unsigned int in=0; in<filesVec.size(); in++){
-    sprintf(tempname,"%s",filesVec.at(in).c_str());
-    sprintf(filenames,"TauHad2Multiple/HadTauEstimation_%s-Apr22_00.root",filesVec.at(in).c_str());  
+    sprintf(tempname,"RA2bin_%s",filesVec.at(in).c_str());
+    std::cout<<" filesVec_i "<< tempname <<endl;
+    //    sprintf(filenames,"TauHad2Multiple/HadTauEstimation_%s-Apr22_00.root",filesVec.at(in).c_str());
+    sprintf(filenames,"TauHad2Multiple/HadTauEstimation_RA2bin_%s_%s-_00.root",type.c_str(),filesVec.at(in).c_str());
+    //    sprintf(filenames,"TauHad2Multiple/HadTauEstimation_%s-Apr22_00.root",filesVec.at(in).c_str());  
     TFile * infile = new TFile(filenames,"READ");
     if(!infile->IsOpen()){
       printf(" file: %s is not open \n",filesVec.at(in).c_str());

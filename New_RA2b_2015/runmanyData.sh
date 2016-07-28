@@ -18,8 +18,8 @@ export outputStr=$outputStr
 echo $filenum
 echo $code 
 
-qsub -N Data_${i} -o qsub/ -e qsub/ -V $submitscript 
-
+#qsub -l walltime=24:00:00 -N Data_${i} -o qsub/ -e qsub/ -V $submitscript 
+qsub -l walltime=24:00:00 -N Data_$outputStr_${i} -o qsub/ -e qsub/ -V $submitscript
 sleep 1
 
 done

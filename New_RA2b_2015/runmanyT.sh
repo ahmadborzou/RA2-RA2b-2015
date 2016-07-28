@@ -10,7 +10,7 @@ outStr=$2
 
 if [ $type -eq 0 ]; then
 
-  for TStr in t_top tW_top; do 
+  for TStr in t_top tW_top s_channel; do 
 
     njobs=`ls InputFiles_T/filelist_Spring15_ST_${TStr}_* | wc -l`
     #njobs=$[$njobs+1]
@@ -57,7 +57,7 @@ fi
 
 if [ $type -eq 1 ]; then
 
-  for TStr in t_top tW_top t_antitop tW_antitop; do
+  for TStr in t_top tW_top t_antitop tW_antitop s_channel; do
 
     njobs=`ls InputFiles_T/filelist_Spring15_ST_${TStr}_* | wc -l`
     #njobs=$[$njobs+1]

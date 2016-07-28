@@ -51,7 +51,7 @@ void plot_MistagRate_allSamples(string sample="TTbar_", int wjets_hadtau_only=0)
   
   //
   // From W+jets
-  TFile file_WJet("Stack/TauBtaggedRate_WJet_stacked.root","R");
+  TFile file_WJet("Stack/ARElog52_TauBtaggedRate_WJet_stacked.root","R");
   temp_wj_tauH = (TH1D*)file_WJet.Get("TauBtaggedRate")->Clone();
   TH1D * wj_tauH = new TH1D("wj_tauH","WJet -- Tau mistag",temp_wj_tauH->GetNbinsX(),temp_wj_tauH->GetXaxis()->GetXmin(),temp_wj_tauH->GetXaxis()->GetXmax());
   for(int ibin=0;ibin<wj_tauH->GetNbinsX()+2;ibin++){
@@ -64,7 +64,7 @@ void plot_MistagRate_allSamples(string sample="TTbar_", int wjets_hadtau_only=0)
 
   //
   // From ttbar
-  TFile file_TTbar("Stack/TauBtaggedRate_TTbar_stacked.root","R");  
+  TFile file_TTbar("Stack/ARElog52_TauBtaggedRate_TTbar_stacked.root","R");  
   temp_tt_tauH = (TH1D*)file_TTbar.Get("TauBtaggedRate")->Clone();
   TH1D * tt_tauH = new TH1D("tt_tauH","WJet -- Tau mistag",temp_tt_tauH->GetNbinsX(),temp_tt_tauH->GetXaxis()->GetXmin(),temp_tt_tauH->GetXaxis()->GetXmax());
   for(int ibin=0;ibin<tt_tauH->GetNbinsX()+2;ibin++){
@@ -107,7 +107,7 @@ void plot_MistagRate_allSamples(string sample="TTbar_", int wjets_hadtau_only=0)
   // TTbar ....................................................................//
   //...........................................................................//
   double XUp = 350. , maxVal=1.;
-
+  double minVal=0.;
     wj_tauH->GetXaxis()->SetRangeUser(30.,XUp);
     wj_tauH->SetMaximum(maxVal);
     wj_tauH->SetTitle("");
@@ -128,6 +128,7 @@ void plot_MistagRate_allSamples(string sample="TTbar_", int wjets_hadtau_only=0)
     wj_tauH->GetYaxis()->SetTitle("b-tagging mistag rate");
     wj_tauH->GetXaxis()->SetRangeUser(30.,XUp);
     wj_tauH->SetMaximum(maxVal);
+    wj_tauH->SetMinimum(minVal);
     wj_tauH->SetLineColor(1);
     wj_tauH->Draw();
 

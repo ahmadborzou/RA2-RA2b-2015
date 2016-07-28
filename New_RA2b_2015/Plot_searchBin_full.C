@@ -71,7 +71,10 @@ Plot_searchBin_full(string sample="stacked",string histname="searchH_b",string e
 
   //
   // Various vertical line coordinates
-  float ymax_top = 40000.;
+  //*AR- Jul27,2016-Value of ymax_top need to be modified based on increasing lumi
+  // for 7.6/fb ymax_top=40000, now changed for 12.9/fb
+
+  float ymax_top = 500000.;
 //  float ymin_top = 0.015;
     float ymin_top = 0.002;
 
@@ -91,7 +94,7 @@ Plot_searchBin_full(string sample="stacked",string histname="searchH_b",string e
   // Luminosity information for scaling
   //double lumi     = 2.109271; // normaliza to this lumi (fb-1)
   //double lumi     = 2.26198; // normaliza to this lumi (fb-1)
-  double lumi     = 3.0;
+  double lumi     = 12.9;
   double lumi_ref = 3.0; // normaliza to 3 (fb-1)
   
   ///////////////////////////////////////////////////////////////////////////////////////////
@@ -293,9 +296,10 @@ Plot_searchBin_full(string sample="stacked",string histname="searchH_b",string e
 
   //std::cout<<" test_2 "<<endl;
   
-  bool AdhocQCD_NjetNbjet=true;
-  //if(AdhocQCD_NjetNbjet && histname.find("QCD")!=string::npos){
-  if(AdhocQCD_NjetNbjet){
+  //  bool AdhocQCD_NjetNbjet=true;
+  bool AdhocQCD_NjetNbjet=true; 
+ //if(AdhocQCD_NjetNbjet && histname.find("QCD")!=string::npos){
+  if(AdhocQCD_NjetNbjet && histname.find("QCD")!=string::npos){
     //    std::cout<<"----------------------------------------- "<<std::endl;
     std::cout<<" hist name "<<histname<<std::endl;
     double GenHistHtMht=0.;
@@ -382,7 +386,7 @@ Plot_searchBin_full(string sample="stacked",string histname="searchH_b",string e
 
   }
 
-  bool Adhoc_NjetNbjet=false;
+  bool Adhoc_NjetNbjet=true;
   if(Adhoc_NjetNbjet && histname.find("searchH_b")!=string::npos){
     //int Nbins=GenHist->GetNbinX();
     std::cout<<"Nbins "<< 160 <<std::endl;  
@@ -692,7 +696,7 @@ Plot_searchBin_full(string sample="stacked",string histname="searchH_b",string e
     ttext_nb->SetTextSize(0.040);
     ttext_nb->SetTextAlign(22);
     
-    ttext_nb->DrawLatex( 6.-0.5 , ymax_top/12. , "N_{#scale[0.2]{ }b-jet}");
+    ttext_nb->DrawLatex( 8.-0.5 , ymax_top/12. , "N_{#scale[0.2]{ }b-jet}");
     
     ttext_nb->DrawLatex( 6.-0.5 , ymax_top/40. , "0");
     ttext_nb->DrawLatex(16.-0.5 , ymax_top/40. , "1");
@@ -764,13 +768,29 @@ Plot_searchBin_full(string sample="stacked",string histname="searchH_b",string e
     ttext_nb->SetTextFont(42);
     ttext_nb->SetTextSize(0.04);
     ttext_nb->SetTextAlign(22);
-    ttext_nb->SetTextAngle(90);
+    //    ttext_nb->SetTextAngle(90);
+    ttext_nb->DrawLatex( 8.-0.5 , ymax_top/12. , "N_{#scale[0.2]{ }b-jet}");
 
-    ttext_nb->DrawLatex( 7.5-0.5 , ymax_top/50. , "N_{b} = 0");
-    ttext_nb->DrawLatex(20.5-0.5 , ymax_top/50. , "N_{b} = 1");
-    ttext_nb->DrawLatex(33.5-0.5 , ymax_top/50. , "N_{b} = 2");
-    ttext_nb->DrawLatex(46.5-0.5 , ymax_top/50. , "N_{b} #geq 3");
+    ttext_nb->DrawLatex( 7.5-0.5 , ymax_top/50. , "0");
+    ttext_nb->DrawLatex(20.5-0.5 , ymax_top/50. , "1");
+    ttext_nb->DrawLatex(33.5-0.5 , ymax_top/50. , "2");
+    ttext_nb->DrawLatex(46.5-0.5 , ymax_top/50. , "#geq 3");
+
+    ttext_nb->DrawLatex(59.5-0.5 , ymax_top/50. , "0");
+    ttext_nb->DrawLatex(72.5-0.5 , ymax_top/50. , "1");
+    ttext_nb->DrawLatex(85.5-0.5 , ymax_top/50. , "2");
+    ttext_nb->DrawLatex(98.5-0.5 , ymax_top/50. , "#geq 3");
     
+    ttext_nb->DrawLatex(111.5-0.5 , ymax_top/50. , "0");
+    ttext_nb->DrawLatex(124.5-0.5 , ymax_top/50. , "1");
+    ttext_nb->DrawLatex(137.5-0.5 , ymax_top/50. , "2");
+    ttext_nb->DrawLatex(150.5-0.5 , ymax_top/50. , "#geq 3");
+
+    ttext_nb->DrawLatex(163.5-0.5 , ymax_top/50. , "0");
+    ttext_nb->DrawLatex(176.5-0.5 , ymax_top/50. , "1");
+    ttext_nb->DrawLatex(189.5-0.5 , ymax_top/50. , "2");
+    ttext_nb->DrawLatex(202.5-0.5 , ymax_top/50. , "#geq 3");
+
     TText * ttext = new TLatex(160. , ymax_top/50. , "Normalized to 10 fb^{-1}");
     ttext->SetTextFont(42);
     ttext->SetTextSize(0.045);

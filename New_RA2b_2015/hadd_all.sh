@@ -18,7 +18,7 @@ for i in 100_200 200_400 400_600 600_800 800_1200 1200_2500 2500_Inf ; do
 
 done 
 
-for i in  t_top tW_top t_antitop tW_antitop ; do
+for i in  t_top tW_top t_antitop tW_antitop s_channel; do
 
   rm HadTauEstimation_${i}_.root
   hadd HadTauEstimation_${i}_.root  `ls HadTauEstimation_${i}_*00.root `
@@ -100,7 +100,7 @@ rm TauBtaggedRate_TTbar_.root
 hadd TauBtaggedRate_TTbar_.root `ls TauBtaggedRate_TTbar_*00.root`
 cp TauBtaggedRate_TTbar_.root ../TauHad
 
-for i in  t_top tW_top t_antitop tW_antitop ; do
+for i in  t_top tW_top t_antitop tW_antitop s_channel; do
 
   rm GenInfo_HadTauEstimation_${i}_.root
   hadd GenInfo_HadTauEstimation_${i}_.root `ls GenInfo_HadTauEstimation_${i}_*00.root `

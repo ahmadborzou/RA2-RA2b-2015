@@ -28,23 +28,30 @@ using namespace std;
    
    // See if working with Data or MC
    bool DataBool;
-
+   
    // Study Tau ID
    bool StudyTauId;
 
    //fastsim
    bool fastsim;
-
+   
    // Declaration of leaf types
    //UChar_t         GoodVtx;
    Int_t           NumInteractions;
    Double_t        TrueNumInteractions;
+   Int_t           NJetsISR;
    //   UChar_t         GoodVtx;
    Int_t          HBHENoiseFilter;
    Int_t          HBHEIsoNoiseFilter;
    Int_t          CSCTightHaloFilter;
    Int_t           eeBadScFilter;
    Int_t           EcalDeadCellTriggerPrimitiveFilter;
+
+   // added on July 12, 2016
+   Double_t        PFCaloMETRatio;
+   Bool_t          BadChargedCandidateFilter;
+   Bool_t          BadPFMuonFilter;
+   Int_t           globalTightHalo2016Filter;
 
    UInt_t          RunNum;
    UInt_t          LumiBlockNum;
@@ -79,6 +86,7 @@ using namespace std;
    vector<TLorentzVector> *GenEls;
    vector<TLorentzVector> *GenTaus;
    vector<TLorentzVector> *GenTauNu;
+   vector<TLorentzVector> *GenJets;
 
    vector<TLorentzVector> *GenParticles;
    vector<int>     *GenParticles_PdgId;
@@ -102,8 +110,6 @@ using namespace std;
    vector<int>     *Jets_neutralHadronMultiplicity;
    vector<double>  *Jets_photonEnergyFraction;
    vector<int>     *Jets_photonMultiplicity;
-
-   
    
    vector<TLorentzVector> *softJetsJECdown;
    vector<TLorentzVector> *softJetsJECup;
@@ -163,6 +169,8 @@ Events(TTree * ttree_, const std::string sampleKeyString="ttbar", int verbose=0)
   int NumInteractions_() const;
   double TrueNumInteractions_() const;
   double XS() const ;
+  int NJetsISR_() const;
+
   bool loadNext();
   int TotNEve() const;
   int Runnum() const;
@@ -238,6 +246,11 @@ Events(TTree * ttree_, const std::string sampleKeyString="ttbar", int verbose=0)
    vector<double>  slimJetPtVec_() const;
    vector<double>  slimJetEtaVec_() const;
    vector<double>  slimJetPhiVec_() const;
+
+   vector<double>  GenJetPtVec_() const;
+   vector<double>  GenJetEtaVec_() const;
+   vector<double>  GenJetPhiVec_() const;
+
    vector<int>    * Jets_partonFlavor_() const;
    vector<bool>   * HTJetsMask_() const;
 
@@ -311,6 +324,13 @@ Events(TTree * ttree_, const std::string sampleKeyString="ttbar", int verbose=0)
    int HBHEIsoNoiseFilter_() const;
    int EcalDeadCellTriggerPrimitiveFilter_() const;
    int NVtx_() const;
+   // added on July 12, 2016
+   int PFCaloMETRatioFilter_() const;
+   int BadChargedCandidateFilter_() const;
+   int BadPFMuonFilter_() const;
+   int globalTightHalo2016Filter_() const;
+   int noMuonJet_() const;
+   int noFakeJet_() const;
 
 };//end of class Events
 #endif

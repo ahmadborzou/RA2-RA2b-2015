@@ -68,53 +68,98 @@ void plot_IsoTrackVetoEfficiencies_forICHEP2016(std::string elogForPlot="Elog401
 
   //
   
-  //  sprintf(tempname,"TauHad/Stack/%sIsoEfficiencies_stacked.root",elogForPlot.c_str());
-  sprintf(tempname2,"TauHad/Stack/KHElog420_modifiedIsoEfficiencies_stacked.root",elogForPlot.c_str());
-  TFile *file_   = new TFile(tempname2,"R");
+  sprintf(tempname,"TauHad/Stack/%sIsoEfficiencies_stacked_LowStatBinNotcorrected.root",elogForPlot.c_str());
 
-  sprintf(tempname,"TauHad/Stack/KHElog420_IsoEfficiencies_stacked.root",elogForPlot.c_str());
   std::cout << "Adjusting " << tempname << std::endl;
   TFile *file   = new TFile(tempname,"R");
   sprintf(tempnameMod,"TauHad/Stack/%smodifiedIsoEfficiencies_stacked.root",elogForPlot.c_str());
   std::cout << "Adjusted " << tempnameMod << std::endl;
   TFile *file2   = new TFile(tempnameMod,"RECREATE");
 
-  sprintf(tempname,"IsoEff_lowDphi");
-  sprintf(tempNum,"Iso_pass_lowDphi");
-  sprintf(tempDen,"Iso_all_lowDphi");
+  int NumHistsToCorrect=2;
+  for(int x=1;x<=NumHistsToCorrect;x++){
+    if(x==1){
+      std::cout<<" High delphi region "<<endl;
+      sprintf(tempname,"IsoEff");
+      sprintf(tempNum,"Iso_pass");
+      sprintf(tempDen,"Iso_all");
+   
+    }
+    if(x==2){
+      std::cout<<" Low delphi region "<<endl;
+      sprintf(tempname,"IsoEff_lowDphi");
+      sprintf(tempNum,"Iso_pass_lowDphi");
+      sprintf(tempDen,"Iso_all_lowDphi");
+    }
 
-  TH1D* thist = (TH1D*)file->Get(tempname)->Clone();
-  TH1D* histNum = (TH1D*)file->Get(tempNum)->Clone();
-  TH1D* histDen = (TH1D*)file->Get(tempDen)->Clone();
 
-  int nbins=histNum->GetNbinsX();
-  std::cout<<"nbins "<<nbins<<endl;
+
+
+
+
+    TH1D* thist = (TH1D*)file->Get(tempname)->Clone();
+    TH1D* histNum = (TH1D*)file->Get(tempNum)->Clone();
+    TH1D* histDen = (TH1D*)file->Get(tempDen)->Clone();
+
+    int nbins=histNum->GetNbinsX();
+    std::cout<<"nbins "<<nbins<<endl;
   
-  for(int j=1;j<=nbins;j++){
-    double binvalue=0;
-    double ratio=thist->GetBinContent(j);
-    double newN=0;
-    double newD=0;    
-    //std::cout <<" j "<<j << " Num " << histNum->GetBinContent(j) << " Den " << histDen->GetBinContent(j) << " " << thist->GetName() << " bincontent "<< ratio <<endl;
+    if(x==1){
+      for(int j=1;j<=nbins;j++){
+	double binvalue=0;
+	double ratio=thist->GetBinContent(j);
+	double newN=0;
+	double newD=0;    
+	//std::cout <<" j "<<j << " Num " << histNum->GetBinContent(j) << " Den " << histDen->GetBinContent(j) << " " << thist->GetName() << " bincontent "<< ratio <<endl;
 
-    if(j==43 || j==52 || j==55 || j==70 || j==72){  
+	if(j==55 || j==60 ||j==61 || j==64 || j==67 || j==70 ||j==72){  
 
-      int kbin=j+1;
-      // bin 61 is low stat and 72 is last, so we use the previous bin
-      if(j==72) kbin=j-1;
+	  int kbin=j+1;
+	  // bin 61 is low stat and 72 is last, so we use the previous bin
+	  if(j==60 ||j==72) kbin=j-1;
 
-      newN=histNum->GetBinContent(j)+histNum->GetBinContent(kbin);
-      newD=histDen->GetBinContent(j)+histDen->GetBinContent(kbin);
-      ratio=newN/newD;
-      binvalue=ratio;
-      double IsoEffOld = thist->GetBinContent(j);
-      double errOld = thist->GetBinError(j);
-      thist->SetBinContent(j,ratio);
-      thist->SetBinError(j,  thist->GetBinError(kbin) );
+	  newN=histNum->GetBinContent(j)+histNum->GetBinContent(kbin);
+	  newD=histDen->GetBinContent(j)+histDen->GetBinContent(kbin);
+	  ratio=newN/newD;
+	  binvalue=ratio;
+	  double IsoEffOld = thist->GetBinContent(j);
+	  double errOld = thist->GetBinError(j);
+	  thist->SetBinContent(j,ratio);
+	  thist->SetBinError(j,  thist->GetBinError(kbin) );
 
-      std::cout<<" Bin "<< j<< " Numerator("<<j<<") "<< histNum->GetBinContent(j) <<" Numerator("<<kbin<<") "<<histNum->GetBinContent(kbin) <<" newNumerator "<<newN<<" Denominator("<<j<<") "<<histDen->GetBinContent(j)<<" Denominator("<<kbin<<") "<< histDen->GetBinContent(kbin)<<" newDenominator "<<newD<< " oldIsoEff("<<j<<") " << IsoEffOld << " newIsoEff("<<j<<") " << ratio << " oldErr("<<j<<") " << errOld << " err("<<kbin<<") " <<  thist->GetBinError(kbin) << " newErr("<<j<<") " << thist->GetBinError(j) << endl;
-    } 
-  }
+	  std::cout<<" Bin "<< j<< " Numerator("<<j<<") "<< histNum->GetBinContent(j) <<" Numerator("<<kbin<<") "<<histNum->GetBinContent(kbin) <<" newNumerator "<<newN<<" Denominator("<<j<<") "<<histDen->GetBinContent(j)<<" Denominator("<<kbin<<") "<< histDen->GetBinContent(kbin)<<" newDenominator "<<newD<< " oldIsoEff("<<j<<") " << IsoEffOld << " newIsoEff("<<j<<") " << ratio << " oldErr("<<j<<") " << errOld << " err("<<kbin<<") " <<  thist->GetBinError(kbin) << " newErr("<<j<<") " << thist->GetBinError(j) << endl;
+	} 
+      }
+    }
+
+    if(x==2){
+      for(int j=1;j<=nbins;j++){
+	double binvalue=0;
+	double ratio=thist->GetBinContent(j);
+	double newN=0;
+	double newD=0;    
+	//std::cout <<" j "<<j << " Num " << histNum->GetBinContent(j) << " Den " << histDen->GetBinContent(j) << " " << thist->GetName() << " bincontent "<< ratio <<endl;
+
+	if(j==43 || j==52 ||j==55 || j==61 || j==64 || j==67 || j==68 || j==70 ||j==72){  
+
+	  int kbin=j+1;
+	  // bin 61 is low stat and 72 is last, so we use the previous bin
+	  if(j==67 ||j==72) kbin=j-1;
+
+	  newN=histNum->GetBinContent(j)+histNum->GetBinContent(kbin);
+	  newD=histDen->GetBinContent(j)+histDen->GetBinContent(kbin);
+	  ratio=newN/newD;
+	  binvalue=ratio;
+	  double IsoEffOld = thist->GetBinContent(j);
+	  double errOld = thist->GetBinError(j);
+	  thist->SetBinContent(j,ratio);
+	  thist->SetBinError(j,  thist->GetBinError(kbin) );
+
+	  std::cout<<" Bin "<< j<< " Numerator("<<j<<") "<< histNum->GetBinContent(j) <<" Numerator("<<kbin<<") "<<histNum->GetBinContent(kbin) <<" newNumerator "<<newN<<" Denominator("<<j<<") "<<histDen->GetBinContent(j)<<" Denominator("<<kbin<<") "<< histDen->GetBinContent(kbin)<<" newDenominator "<<newD<< " oldIsoEff("<<j<<") " << IsoEffOld << " newIsoEff("<<j<<") " << ratio << " oldErr("<<j<<") " << errOld << " err("<<kbin<<") " <<  thist->GetBinError(kbin) << " newErr("<<j<<") " << thist->GetBinError(j) << endl;
+	} 
+      }
+    }
+
 
   std::cout << "thist name " << thist->GetName() << std::endl;
 
@@ -220,6 +265,41 @@ void plot_IsoTrackVetoEfficiencies_forICHEP2016(std::string elogForPlot="Elog401
 
   double xlatex=0.75;
   double ylatex=0.70;
+
+
+    if(x==1){
+      c1->Print("plot_IsoTrackVetoEfficiencies.png");
+      c1->Print("plot_IsoTrackVetoEfficiencies.pdf");
+    }
+
+    if(x==2){
+      c1->Print("plot_IsoTrackVetoEfficiencies_lowDphi.png");
+      c1->Print("plot_IsoTrackVetoEfficiencies_lowDphi.pdf");
+    }
+
+    file2->cd();
+    thist->Write();
+  }
+  sprintf(tempname,"IsoEff_NbNjet34"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet56"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet78"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet9");  thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+
+  sprintf(tempname,"IsoEff_NbNjet34_lowDphi"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet56_lowDphi"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet78_lowDphi"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet9_lowDphi");  thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+
+  file2->Close();
+
+
+}
+
+
+
+
+
+
   /*
   TLatex *   tex = new TLatex(xlatex,ylatex,"arXiv:1602.06581");
   tex->SetTextColor(4);
@@ -241,40 +321,32 @@ void plot_IsoTrackVetoEfficiencies_forICHEP2016(std::string elogForPlot="Elog401
   pt.SetTextFont(61);
   pt.SetTextSize(0.055);
   pt.Draw();
-  */
-  c1->Print("plot_IsoTrackVetoEfficiencies_lowDphi.pdf");
+  
+  c1->Print("plot_IsoTrackVetoEfficiencies.png");
   file2->cd();
   thist->Write();
+  TH1D *thist_lowDphi = (TH1D*)file->Get("IsoEff_lowDphi")->Clone();
+  thist_lowDphi->Write();
 
-  //KH: Nb-dependence-
+  //KH: keep the efficiency inputs for record
+  histNum->Write();
+  histDen->Write();
+  
+  //KH: Nb-dependence
+  sprintf(tempname,"IsoEff_NbNjet34"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet56"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet78"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet9");  thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
 
-  sprintf(tempname,"Iso_pass_lowDphi"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
-  sprintf(tempname,"Iso_all_lowDphi"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
-
-
-  sprintf(tempname,"IsoEff"); thist = (TH1D*)file_->Get(tempname)->Clone(); thist->Write();
-  TCanvas* c2 = new TCanvas("name","name",10,10,W,H);
-  thist->Draw();
-  c2->Print("plot_IsoTrackVetoEfficiencies.pdf");
-
- sprintf(tempname,"Iso_pass"); thist = (TH1D*)file_->Get(tempname)->Clone(); thist->Write();
-  sprintf(tempname,"Iso_all"); thist = (TH1D*)file_->Get(tempname)->Clone(); thist->Write();
-
-
-  sprintf(tempname,"IsoEff_NbNjet34"); thist = (TH1D*)file_->Get(tempname)->Clone(); thist->Write();
-  sprintf(tempname,"IsoEff_NbNjet56"); thist = (TH1D*)file_->Get(tempname)->Clone(); thist->Write();
-  sprintf(tempname,"IsoEff_NbNjet78"); thist = (TH1D*)file_->Get(tempname)->Clone(); thist->Write();
-  sprintf(tempname,"IsoEff_NbNjet9");  thist = (TH1D*)file_->Get(tempname)->Clone(); thist->Write();
-
-  sprintf(tempname,"IsoEff_NbNjet34_lowDphi"); thist = (TH1D*)file_->Get(tempname)->Clone(); thist->Write();
-  sprintf(tempname,"IsoEff_NbNjet56_lowDphi"); thist = (TH1D*)file_->Get(tempname)->Clone(); thist->Write();
-  sprintf(tempname,"IsoEff_NbNjet78_lowDphi"); thist = (TH1D*)file_->Get(tempname)->Clone(); thist->Write();
-  sprintf(tempname,"IsoEff_NbNjet9_lowDphi");  thist = (TH1D*)file_->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet34_lowDphi"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet56_lowDphi"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet78_lowDphi"); thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
+  sprintf(tempname,"IsoEff_NbNjet9_lowDphi");  thist = (TH1D*)file->Get(tempname)->Clone(); thist->Write();
 
   file2->Close();
 
 }
-
+  */
 void shift_bin(TH1* input, TH1* output){
 
   char tempname[200];  

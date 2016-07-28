@@ -1,4 +1,4 @@
-void plot_MuonsFromTaus_forICHEP2016(){
+void plot_MuonsFromTaus_forICHEP2016(std::string elogForPlot="Elog401_"){
 
   //
   // icomp=0: only show own results
@@ -75,10 +75,10 @@ void plot_MuonsFromTaus_forICHEP2016(){
   //sprintf(tempname,"TauHad2/Stack/Probability_Tau_mu_stacked.root");
   //sprintf(tempname,"TauHad2/Stack/Elog401_Probability_Tau_mu_stacked.root");
   //    sprintf(tempname,"TauHad2/Stack/Elog433_Probability_Tau_mu_stacked.root"); 
-  sprintf(tempname,"TauHad2/Stack/Elog433_Probability_Tau_mu_stacked_LowStatBinsNotCorrected.root");
+  sprintf(tempname,"TauHad2/Stack/%sProbability_Tau_mu_stacked_LowStatBinsNotCorrected.root",elogForPlot.c_str());
   std::cout<<" tempname received "<<endl;
   TFile *file   = new TFile(tempname,"R");
-  sprintf(tempnameMod,"TauHad2/Stack/Elog433_modifiedProbability_Tau_mu_stacked.root");
+  sprintf(tempnameMod,"TauHad2/Stack/%smodifiedProbability_Tau_mu_stacked.root",elogForPlot.c_str());
   TFile *file2   = new TFile(tempnameMod,"RECREATE");
 
   int NumHistsToCorrect=2;
@@ -110,9 +110,9 @@ void plot_MuonsFromTaus_forICHEP2016(){
       double newN=0;
       double newD=0;
       if(x==1){
-	if(j==52 || j==55 ||j==61 || j==64 || j==67 ||j==70 ||j==72){
+	if(j==48 || j==52 || j==55 || j==60 || j==61 || j==64 || j==67 ||j==70 ||j==72){
 	  int kbin=j+1;
-	  if(j==72) kbin=j-1;
+	  if(j==48 || j==60 || j==72) kbin=j-1;
 	  newN=histNum->GetBinContent(j)+histNum->GetBinContent(kbin);
 	  newD=histDen->GetBinContent(j)+histDen->GetBinContent(kbin);
 	  ratio=newN/newD;
@@ -128,9 +128,9 @@ void plot_MuonsFromTaus_forICHEP2016(){
 	}
       }
       if(x==2){
-	if(j==52 ||j==55 ||j==60 ||j==70){
+	if(j==43 || j==52 || j==55 || j==61 || j==64 || j==67 ||j==70){
 	  int kbin=j+1;
-	  if(j==72) kbin=j-1;
+	  //if(j==60) kbin=j-1;
 	  newN=histNum->GetBinContent(j)+histNum->GetBinContent(kbin);
 	  newD=histDen->GetBinContent(j)+histDen->GetBinContent(kbin);
 	  ratio=newN/newD;

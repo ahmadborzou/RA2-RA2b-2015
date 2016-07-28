@@ -121,9 +121,13 @@ Plot_searchBin_full_Data(string sample="stacked",string histname="searchH_b",
   //TFile * EstFile = new TFile("TauHad2/Elog404_HadTauEstimation_data_SingleMuon_v15d_TriggerOn.root","R");
   //  TFile * EstFile = new TFile("TauHad2/HadTauEstimation_data_SingleMuon_v15d_Elog408V3_V5_.root","R");
   //    TFile * EstFile = new TFile("TauHad2/HadTauEstimation_data_SingleMuon_v16b_.root","R");
-  TFile * EstFile = new TFile("TauHad2/HadTauEstimation_data_SingleMuon_v17a_.root","R");
-
-  sprintf(tempname,"TauHad/Stack/GenInfo_HadTauEstimation_%s.root",sample.c_str());
+  //    TFile * EstFile = new TFile("TauHad2/ARElog40_2.6_HadTauEstimation_data_SingleMuon_v17a_.root","R");
+  //    TFile * EstFile = new TFile("TauHad2/ARElog41_2.6fb_HadTauEstimation_data_SingleMuon_v17a_.root","R");
+  //TFile * EstFile = new TFile("TauHad2/ARElog42_4fb_HadTauEstimation_data_SingleMuon_v16b_.root","R");
+  //  TFile * EstFile = new TFile("TauHad2/ARElog49_7.6ifb_HadTauEstimation_data_SingleMuon_V9bc_.root","R");
+  //  TFile * EstFile = new TFile("TauHad2/ARElog56_12.9ifb_HadTauEstimation_data_SingleMuon_V9bcd_.root","R");
+  TFile * EstFile = new TFile("TauHad2/ARElog60_12.9ifb_HadTauEstimation_data_SingleMuon_V9bcd_.root","R");
+  sprintf(tempname,"TauHad/Stack/ARElog57_GenInfo_HadTauEstimation_%s.root",sample.c_str());
   //cout << "warning:\n Warning \n \n  using elog195 for pre and  exp \n \n ";
   TFile * GenFile = new TFile(tempname,"R");
   printf("Opened %s\n",tempname);
@@ -461,13 +465,20 @@ Plot_searchBin_full_Data(string sample="stacked",string histname="searchH_b",
     ttext_nb->DrawLatex(146.-0.5 , ymax_top/40. , "2");
     ttext_nb->DrawLatex(156.-0.5 , ymax_top/40. , "#geq 3");
 
-    
+    //sprintf(tempname,"CMS Preliminary,    %s,    #sqrt{s} = 13 TeV",  lumilabel);
+    sprintf(tempname,"CMS Preliminary                                                                                    %s (13 TeV)",  lumilabel);
+    TLatex * ttext = new TLatex(search_x_min, ymax_top*1.15,tempname);
+    ttext->SetTextFont(42);
+    ttext->SetTextSize(0.045);
+    ttext->SetTextAlign(11);
+    ttext->Draw();
+    /*   
     TText * ttext = new TLatex(105. , ymax_top/80. , lumilabel);
     ttext->SetTextFont(42);
     ttext->SetTextSize(0.045);
     ttext->SetTextAlign(22);
     ttext->Draw();
-
+*/
     //
   } else if(histname.find("QCD")!=string::npos ){
     

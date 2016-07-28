@@ -72,7 +72,7 @@ void plot_MtEff_forICHEP2016(std::string elogForPlot=""){
   
   //TFile * file = new TFile("TauHad2/Elog401_MtEff.root","R");
   //TFile *file = new TFile("MtEff_TTbar_Elog227.root","R"); 
-  TFile * file = new TFile("TauHad2/ARElog35_MtEff.root","R");
+  TFile * file = new TFile("TauHad2/ARElog52_MtEff.root","R");
   sprintf(tempnameMod,"TauHad2/%smodified_MtEff.root",elogForPlot.c_str());
   TFile *file2   = new TFile(tempnameMod,"RECREATE");
 
@@ -153,9 +153,9 @@ void plot_MtEff_forICHEP2016(std::string elogForPlot=""){
     //  sprintf(tempname,"MtCutEff");
     //thist = (TH1D*)file->Get(tempname)->Clone();
 
-  thist_input = static_cast<TH1D*>(thist->Clone("thist_input"));
-  shift_bin(thist_input,thist);
-  thist_fixed = static_cast<TH1D*>(thist->Clone("thist_fixed"));
+    //thist_input = static_cast<TH1D*>(thist->Clone("thist_input"));
+    //shift_bin(thist_input,thist);
+    //thist_fixed = static_cast<TH1D*>(thist->Clone("thist_fixed"));
 
   thist->SetLineColor(1);
   thist->SetLineStyle(1);

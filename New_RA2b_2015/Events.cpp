@@ -1,6 +1,6 @@
 #include "Events.h"
 #include <vector>
-
+#include <utils.h>
 
   //Constructor
   Events::Events(TTree * ttree_, const std::string sampleKeyString, int verbose) : currentEntry_(-1) {
@@ -13,7 +13,7 @@
 
     // fastsim
     fastsim=false;
-
+    
     //Initialize some varaibles
      RunNum=-1;
      LumiBlockNum=-1;
@@ -22,7 +22,6 @@
      isoElectronTracks=-1;
      isoMuonTracks=-1;
      isoPionTracks=-1;
-     //     Leptons=-1;
      NJets=-1;
      BTags=-1;
      Weight=1;
@@ -47,6 +46,7 @@
      GenEls = 0;
      GenTauNu = 0;
      GenTaus = 0;
+     GenJets = 0;
 
      GenParticles = 0;
      GenParticles_PdgId = 0;  
@@ -125,6 +125,8 @@
      fChain->SetBranchAddress("isoElectronTracks", &isoElectronTracks);
      fChain->SetBranchAddress("isoMuonTracks", &isoMuonTracks);
      fChain->SetBranchAddress("isoPionTracks", &isoPionTracks);
+     //
+     fChain->SetBranchAddress("NJetsISR", &NJetsISR);
      //     fChain->SetBranchAddress("Leptons", &Leptons);
      fChain->SetBranchAddress("NJets", &NJets);
      fChain->SetBranchAddress("BTags", &BTags);
@@ -147,6 +149,10 @@
        fChain->SetBranchAddress("CSCTightHaloFilter", &CSCTightHaloFilter);
        fChain->SetBranchAddress("eeBadScFilter", &eeBadScFilter);
        fChain->SetBranchAddress("EcalDeadCellTriggerPrimitiveFilter", &EcalDeadCellTriggerPrimitiveFilter);
+       fChain->SetBranchAddress("PFCaloMETRatio", &PFCaloMETRatio);
+       fChain->SetBranchAddress("BadChargedCandidateFilter", &BadChargedCandidateFilter);
+       fChain->SetBranchAddress("BadPFMuonFilter", &BadPFMuonFilter);
+       fChain->SetBranchAddress("globalTightHalo2016Filter", &globalTightHalo2016Filter);
      }
      if(!DataBool){
        fChain->SetBranchAddress("GenMus", &GenMus);
@@ -156,6 +162,7 @@
        fChain->SetBranchAddress("GenTaus", &GenTaus);
        fChain->SetBranchAddress("GenTau_GenTauHad", &GenTau_GenTauHad);
        fChain->SetBranchAddress("GenTauNu", &GenTauNu);
+       fChain->SetBranchAddress("GenJets", &GenJets);
        fChain->SetBranchAddress("madHT", &madHT);
        fChain->SetBranchAddress("GenMu_MT2Activity", &GenMu_MT2Activity);
 
@@ -269,6 +276,8 @@
   double Events::TrueNumInteractions_() const {return TrueNumInteractions; }
   double Events::XS() const { return CrossSection; }
 
+  int Events::NJetsISR_() const {return NJetsISR; }
+
   // Total number of events
   int Events::TotNEve() const { return template_Entries; }   
 
@@ -290,7 +299,6 @@
   // MET 
   double Events::met() const { return MET; }
   double Events::metphi() const { return METPhi; }
-
 
   // Number of HT jets
   int Events::nJets() const { return NJets; }
@@ -510,6 +518,13 @@
       }
       return vec;
     }
+    vector<double>  Events::GenJetPtVec_() const { 
+      vector<double> vec;
+      for(int i=0;i < GenJets->size();i++){
+	vec.push_back(GenJets->at(i).Pt());
+      }
+      return vec;
+    }
     vector<double>  Events::slimJetEtaVec_() const { 
       vector<double> vec;
       for(int i=0;i < Jets->size();i++){
@@ -521,6 +536,14 @@
       
       return vec;
     }
+    vector<double>  Events::GenJetEtaVec_() const { 
+      vector<double> vec;
+      for(int i=0;i < GenJets->size();i++){
+	vec.push_back(GenJets->at(i).Eta());
+      }
+      return vec;
+    }
+
     vector<double>  Events::slimJetPhiVec_() const { 
       vector<double> vec;
       for(int i=0;i < Jets->size();i++){
@@ -528,6 +551,13 @@
       }
       for(int i=0;i < softJets->size();i++){
 	vec.push_back(softJets->at(i).Phi());
+      }
+      return vec;
+    }
+    vector<double>  Events::GenJetPhiVec_() const { 
+      vector<double> vec;
+      for(int i=0;i < GenJets->size();i++){
+	vec.push_back(GenJets->at(i).Phi());
       }
       return vec;
     }
@@ -784,7 +814,7 @@ vector<int>     Events::GenTauHadVec_() const {
   return temp;
 }
 
-  double Events::csv_() const {return 0.890;} 
+  double Events::csv_() const {return 0.80;} 
 
 //int Events::GoodVtx_() const {return GoodVtx;}
   int Events::CSCTightHaloFilter_() const {return CSCTightHaloFilter;}
@@ -793,6 +823,42 @@ vector<int>     Events::GenTauHadVec_() const {
   int Events::HBHEIsoNoiseFilter_() const {return HBHEIsoNoiseFilter;}
   int Events::EcalDeadCellTriggerPrimitiveFilter_() const {return EcalDeadCellTriggerPrimitiveFilter;}
   int Events::NVtx_() const {return NVtx;}
+  // added on July 12, 2016
+int Events::PFCaloMETRatioFilter_() const{ return (PFCaloMETRatio<5); }
+int Events::BadChargedCandidateFilter_() const {return BadChargedCandidateFilter; }
+int Events::BadPFMuonFilter_() const { return BadPFMuonFilter; }
+int Events::globalTightHalo2016Filter_() const {return globalTightHalo2016Filter; }
+  int Events::noMuonJet_() const {
+    Utils * utils = new Utils();
+    bool noMuonJet = true;
+    for(unsigned j = 0; j < Jets->size(); ++j){
+      if(Jets->at(j).Pt() > 200 && Jets_muonEnergyFraction->at(j) > 0.5 && utils->deltaPhi(Jets->at(j).Phi(),METPhi) > (TMath::Pi() - 0.4)){
+	noMuonJet = false;
+	break;
+      }
+    }
+    return (int)noMuonJet;
+  }
+int Events::noFakeJet_() const {
+    bool noFakeJet = true;
+    //reject events with any jet pt>30, |eta|<2.5 NOT matched to a GenJet (w/in DeltaR<0.3) and chfrac < 0.1
+    for(unsigned j = 0; j < Jets->size(); ++j){
+      if(Jets->at(j).Pt() <= 30 || fabs(Jets->at(j).Eta())>=2.5) continue;
+      bool genMatched = false;
+      for(unsigned g = 0; g < GenJets->size(); ++g){
+	if(GenJets->at(g).DeltaR(Jets->at(j)) < 0.3) {
+	  genMatched = true;
+	  break;
+	}
+      }
+      if(!genMatched && Jets_chargedHadronEnergyFraction->at(j) < 0.1){
+	noFakeJet = false;
+	break;
+      }
+    }
+    return (int)noFakeJet;
+  }
+
 
 //std::vector<double> Events::Pt_GenMu() const { 
 //    std::vector<double> tempV;
